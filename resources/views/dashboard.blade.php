@@ -467,17 +467,21 @@
                         <td>{{ $item->created_at->format('H:i') }}</td>
                         <td>{{ $item->tipe_transaksi }} ({{ $item->nama_pelanggan }})</td>
                         <td>
-                            @if($item->tipe_transaksi == 'harian')
-                                Tiket Masuk Harian
-                            @elseif($item->tipe_transaksi == 'checkin')
-                                Check-in Member Lama
-                            @else
-                                Pendaftaran/Perpanjangan Member
-                            @endif
+                            @if($item->tipe_transaksi == 'Harian')
+                        Tiket Masuk Harian
+                    @elseif($item->tipe_transaksi == 'Checkin')
+                        Check-in Member Lama    
+                    @elseif($item->tipe_transaksi == 'Perpanjang')
+                        Perpanjang Member    
+                    @elseif($item->tipe_transaksi == 'Baru')
+                        Pendaftaran Member Baru
+                    @else
+                        Tipe Tidak Diketahui
+                    @endif
                         </td>
                         <td>
                             @if($item->nominal == 0)
-                                -
+                                
                             @else
                                 Rp {{ number_format($item->nominal, 0, ',','.') }}
                             @endif
@@ -489,78 +493,118 @@
         </div>
     </div>
 
-    <div class="modal-overlay" id="modalTransaksi">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h2>Form Transaksi & Check-in</h2>
-                <button class="btn-close" id="btnTutupModal">&times;</button>
+   <div class="modal-overlay" id="modalTransaksi">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h2>Form Transaksi & Check-in</h2>
+            <button class="btn-close" id="btnTutupModal">&times;</button>
+        </div>
+        
+        <form action="{{ route('transaksi.simpan') }}" method="POST">
+            @csrf
+            <div class="form-group">
+                <label>Pilihan Aksi:</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="tipe_kunjungan" value="harian" checked> Harian / Non-Member</label>
+                    <label><input type="radio" name="tipe_kunjungan" value="checkin"> Check-in Member Lama</label>
+                    <label><input type="radio" name="tipe_kunjungan" value="baru"> Member Baru</label>
+                    <label><input type="radio" name="tipe_kunjungan" value="perpanjang"> Perpanjang Member (Renew)</label>
+                </div>
             </div>
-            
-            <form action="{{ route('transaksi.simpan') }}" method="POST">
-                @csrf
-                <div class="form-group">
-                    <label>Pilihan Aksi:</label>
-                    <div class="radio-group">
-                        <label><input type="radio" name="tipe_kunjungan" value="harian" checked> Harian / Non-Member</label>
-                        <label><input type="radio" name="tipe_kunjungan" value="checkin"> Check-in Member Lama</label>
-                        <label><input type="radio" name="tipe_kunjungan" value="baru"> Member Baru</label>
-                    </div>
-                </div>
 
-                <div class="form-group" id="inputNama">
-                    <label>Nama Pelanggan:</label>
-                    <input type="text" name="nama" placeholder="Masukkan nama...">
-                </div>
+            <div class="form-group" id="inputNama">
+                <label>Nama Pelanggan / Member:</label>
+                <input type="text" name="nama" placeholder="Masukkan nama..." required>
+            </div>
 
-                <div class="form-group" id="inputTelepon" style="display: none;">
-                    <label>No. Telepon:</label>
-                    <input type="text" name="nomor_telepon" placeholder="Masukkan nomor telepon...">
-                </div>
+            <div class="form-group" id="inputTelepon" style="display: none;">
+                <label>No. Telepon:</label>
+                <input type="text" name="nomor_telepon" placeholder="Masukkan nomor telepon...">
+            </div>
 
-                <div class="form-group" id="inputNominal">
-                    <label>Total Bayar:</label>
-                    <input type="number" name="nominal" value="10000">
-                </div>
+            <div class="form-group" id="inputNominal">
+                <label>Total Bayar (Rp):</label>
+                <input type="number" name="nominal" id="nominalInput" value="10000" required>
+            </div>
 
-                <button type="submit" class="btn-simpan">SIMPAN TRANSAKSI</button>
-            </form>
+            <button type="submit" class="btn-simpan">SIMPAN TRANSAKSI</button>
+        </form>
+    </div>
+</div>
         </div>
     </div>
 
     <script>
-        const modal = document.getElementById('modalTransaksi');
-        const btnBuka = document.getElementById('btnBukaModal');
-        const btnTutup = document.getElementById('btnTutupModal');
-        
-        const radioTipe = document.querySelectorAll('input[name="tipe_kunjungan"]');
-        const inputTelepon = document.getElementById('inputTelepon');
-        const inputNama = document.getElementById('inputNama');
-        const inputNominal = document.getElementById('inputNominal');
-        const fieldNominal = inputNominal.querySelector('input');
+    // ==========================================
+    // 1. PENGENDALI MODAL TRANSAKSI (DIPERTAHANKAN & DISESUAIKAN)
+    // ==========================================
+    const modal = document.getElementById('modalTransaksi');
+    const btnBuka = document.getElementById('btnBukaModal');
+    const btnTutup = document.getElementById('btnTutupModal');
+    
+    const radioTipe = document.querySelectorAll('input[name="tipe_kunjungan"]');
+    const inputTelepon = document.getElementById('inputTelepon');
+    const inputNama = document.getElementById('inputNama');
+    const inputNominal = document.getElementById('inputNominal');
+    const fieldNominal = inputNominal.querySelector('input');
 
-        btnBuka.addEventListener('click', () => modal.classList.add('show'));
-        btnTutup.addEventListener('click', () => modal.classList.remove('show'));
+    // Membuka dan menutup modal utama dashboard
+    btnBuka.addEventListener('click', () => modal.classList.add('show'));
+    btnTutup.addEventListener('click', () => modal.classList.remove('show'));
 
-        radioTipe.forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                if (e.target.value === 'harian') {
-                    inputNama.style.display = 'block';
-                    inputTelepon.style.display = 'none';
-                    inputNominal.style.display = 'block';
-                    fieldNominal.value = '10000';
-                } else if (e.target.value === 'checkin') {
-                    inputNama.style.display = 'block';
-                    inputTelepon.style.display = 'none';
-                    inputNominal.style.display = 'none';
-                    fieldNominal.value = '0';
-                } else if (e.target.value === 'baru') {
-                    inputNama.style.display = 'block';
-                    inputTelepon.style.display = 'block';
-                    inputNominal.style.display = 'block';
-                    fieldNominal.value = '100000';
-                }
-            });
+    // ==========================================
+    // 2. LOGIKA KONDISI INPUT FORM (ADA TAMBAHAN 'PERPANJANG')
+    // ==========================================
+    radioTipe.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (e.target.value === 'harian') {
+                inputNama.style.display = 'block';
+                inputTelepon.style.display = 'none';
+                inputNominal.style.display = 'block';
+                fieldNominal.value = '10000';
+            } else if (e.target.value === 'checkin') {
+                inputNama.style.display = 'block';
+                inputTelepon.style.display = 'none';
+                // Menyembunyikan input nominal karena check-in bernilai Rp 0
+                inputNominal.style.display = 'none'; 
+                fieldNominal.value = '0';
+            } else if (e.target.value === 'baru') {
+                inputNama.style.display = 'block';
+                // Memunculkan input telepon untuk meregistrasi data nomor HP member baru
+                inputTelepon.style.display = 'block'; 
+                inputNominal.style.display = 'block';
+                fieldNominal.value = '100000';
+            } 
+            // 🌟 TAMBAHAN BARU: Logika Tampilan Untuk Perpanjang Member
+            else if (e.target.value === 'perpanjang') {
+                inputNama.style.display = 'block';
+                inputTelepon.style.display = 'none'; // Sembunyikan telepon karena datanya sudah ada di database member lama
+                inputNominal.style.display = 'block'; // Munculkan nominal bayar perpanjangan bulanan
+                fieldNominal.value = '100000'; // Nominal default perpanjang bulanan
+            }
         });
-    </script>
+    });
+
+    // ==========================================
+    // 3. SCRIPT TAMBAHAN: PENGENDALI MENU MOBILE HP
+    // ==========================================
+    const menuHP = document.getElementById('menuHP');
+    const sidebar = document.querySelector('.sidebar');
+    const backdropHP = document.getElementById('backdropHP');
+
+    if (menuHP) {
+        menuHP.addEventListener('click', () => {
+            sidebar.classList.add('show');
+            backdropHP.classList.add('show');
+        });
+    }
+
+    if (backdropHP) {
+        backdropHP.addEventListener('click', () => {
+            sidebar.classList.remove('show');
+            backdropHP.classList.remove('show');
+        });
+    }
+</script>
 </body>
 </html>

@@ -362,13 +362,18 @@
     </div>
 
     <div class="main-content">
-        
-        <div class="header">
-            @if(session('sukses'))
+        @if(session('sukses'))
                 <div style="background-color: #d1fae5; color: #065f46; padding: 16px; border-radius: 8px; font-weight: 600; border: 1px solid #a7f3d0; margin-bottom: 15px; width: 100%;">
                     {{ session('sukses') }}
                 </div>
-            @endif
+        @endif
+
+        @if(session('gagal'))
+            <div style="background-color: #fee2e2; color: #991b1b; padding: 16px; border-radius: 8px; font-weight: 600; border: 1px solid #fca5a5; margin-bottom: 15px;">
+                {{ session('gagal') }}
+            </div>
+        @endif
+        <div class="header">
             <h1>Data Member Terdaftar</h1>
             <span>Admin: <strong>FRAZA</strong></span>
         </div>
