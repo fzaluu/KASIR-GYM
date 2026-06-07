@@ -8,7 +8,7 @@ class Member extends Model
 {
     protected $table = 'members';
 
-    protected $fillable = ['nama_member', 'nomor_telepon', 'tanggal_kadaluarsa'];
+    protected $fillable = ['nama_member', 'nomor_telepon', 'tanggal_kadaluarsa','total_checkin'];
 
     // Relasi ke model AbsensiMember
     public function absensi()

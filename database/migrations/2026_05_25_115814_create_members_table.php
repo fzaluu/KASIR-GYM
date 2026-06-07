@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('nama_member',100);
             $table->string('nomor_telepon',15);
             $table->date('tanggal_kadaluarsa');
+            $table->integer('total_checkin')->default(0);
             $table->timestamps();
         });
     }

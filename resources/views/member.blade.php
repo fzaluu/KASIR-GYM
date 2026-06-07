@@ -1,462 +1,424 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Member - Kasir Gym</title>
-    <style>
-        /* CSS RESET & BASE */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+@extends('layouts.app')
 
-        body {
-            display: flex;
-            background-color: #f4f6f9;
-            height: 100vh;
-            overflow: hidden;
-        }
+@section('title', 'Data Member - Virgo Gym')
+@section('page_title', 'Data Member Terdaftar')
 
-        /* Navigasi Sidebar Kiri */
-        .sidebar {
-            width: 260px;
-            background-color: #1e293b;
-            color: #fff;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-        }
+@push('styles')
+<style>
+    /* 🔍 TOP BAR: TOMBOL & FILTER CARI */
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
 
-        .sidebar h2 {
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 20px;
-            color: #38bdf8;
-            letter-spacing: 1px;
-        }
+    .btn-tambah {
+        background-color: #10b981;
+        color: #fff;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 14px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background-color 0.2s;
+        box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+    }
+    .btn-tambah:hover { background-color: #059669; }
 
-        .sidebar a {
-            color: #94a3b8;
-            text-decoration: none;
-            padding: 12px 16px;
-            margin-bottom: 8px;
-            border-radius: 8px;
-            display: block;
-            transition: all 0.2s;
-        }
+    /* Kotak Cari Nama Member */
+    .filter-box form {
+        display: flex;
+        gap: 8px;
+    }
 
-        /* Link Member kita set aktif di halaman ini */
-        .sidebar a.active, .sidebar a:hover {
-            background-color: #334155;
-            color: #fff;
-        }
+    .input-filter {
+        padding: 10px 14px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 14px;
+        outline: none;
+        background-color: #fff;
+        width: 220px;
+    }
+    .input-filter:focus { border-color: #38bdf8; }
 
-        /* Konten Utama Kanan */
-        .main-content {
-            flex: 1;
-            padding: 30px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-        }
+    .btn-filter {
+        background-color: #475569;
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+    }
+    .btn-filter:hover { background-color: #334155; }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 15px;
-        }
+    /* 📋 TABLE STYLE */
+    .table-container {
+        background-color: #fff;
+        padding: 24px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        border: 1px solid #e2e8f0;
+    }
 
-        .header h1 {
-            font-size: 24px;
-            color: #0f172a;
-        }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+    }
 
-        /* Area Tombol Aksi */
-        .action-area {
-            display: flex;
-            justify-content: flex-start;
-        }
+    th, td {
+        padding: 14px 16px;
+        border-bottom: 1px solid #e2e8f0;
+        font-size: 14px;
+    }
 
-        .btn-aksi {
-            background-color: #10b981; /* Warna hijau untuk tambah member */
-            color: #fff;
-            border: none;
-            padding: 14px 24px;
-            border-radius: 8px;
-            font-size: 15px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: background-color 0.2s;
-            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
-        }
+    th {
+        background-color: #f8fafc;
+        color: #475569;
+        font-weight: 600;
+    }
 
-        .btn-aksi:hover {
-            background-color: #059669;
-        }
+    tr:hover td { background-color: #f8fafc; }
 
-        /* Desain Tabel Manual */
-        .table-container {
-            background-color: #fff;
-            padding: 24px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-            border: 1px solid #e2e8f0;
-        }
+    /* Badge Status Sisa Hari */
+    .badge {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+    }
+    .badge-aktif { background-color: #d1fae5; color: #065f46; }
+    .badge-habis { background-color: #fee2e2; color: #991b1b; }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-        }
+    /* Tombol Aksi */
+    .action-btns {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
 
-        th, td {
-            padding: 14px 16px;
-            border-bottom: 1px solid #e2e8f0;
-            font-size: 14px;
-        }
+    .btn-action {
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: 600;
+        transition: opacity 0.2s;
+    }
+    .btn-action:hover { opacity: 0.9; }
 
-        th {
-            background-color: #f8fafc;
-            color: #475569;
-            font-weight: 600;
-        }
+    .btn-checkin { background-color: #10b981; } /* Hijau */
+    .btn-perpanjang { background-color: #38bdf8; } /* Biru langit */
+    .btn-edit { background-color: #f59e0b; } /* Orange */
+    .btn-hapus { background-color: #ef4444; } /* Merah */
 
-        tr:hover td {
-            background-color: #f8fafc;
-        }
+    /* 🏛️ MODAL STYLE */
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background-color: rgba(15, 23, 42, 0.6);
+        display: flex; justify-content: center; align-items: center;
+        opacity: 0; pointer-events: none;
+        transition: all 0.25s ease; z-index: 999;
+    }
 
-        /* Badge Status Sisa Hari */
-        .badge {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .badge-aktif {
-            background-color: #d1fae5;
-            color: #065f46;
-        }
-        .badge-habis {
-            background-color: #fee2e2;
-            color: #991b1b;
-        }
+    .modal-overlay.show { opacity: 1; pointer-events: auto; }
 
-        /* CSS MODAL MANUAL */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(15, 23, 42, 0.6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: all 0.25s ease;
-            z-index: 999;
-        }
+    .modal-box {
+        background-color: #fff; padding: 30px; border-radius: 12px;
+        width: 460px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+        transform: scale(0.9); transition: all 0.25s ease;
+    }
 
-        .modal-overlay.show {
-            opacity: 1;
-            pointer-events: auto;
-        }
+    .modal-overlay.show .modal-box { transform: scale(1); }
 
-        .modal-box {
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 12px;
-            width: 480px;
-            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-            transform: scale(0.9);
-            transition: all 0.25s ease;
-        }
+    .modal-header {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;
+    }
 
-        .modal-overlay.show .modal-box {
-            transform: scale(1);
-        }
+    .modal-header h2 { font-size: 18px; color: #0f172a; }
+    .btn-close { background: none; border: none; font-size: 28px; cursor: pointer; color: #94a3b8; line-height: 1; }
 
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 12px;
-        }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #334155; }
+    .form-group input, .form-group select { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; background-color: #fff; }
+    .form-group input:focus, .form-group select:focus { border-color: #38bdf8; }
 
-        .modal-header h2 {
-            font-size: 18px;
-            color: #0f172a;
-        }
+    .btn-simpan {
+        width: 100%; background-color: #10b981; color: white; border: none;
+        padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px;
+    }
+    .btn-simpan:hover { background-color: #059669; }
 
-        .btn-close {
-            background: none;
-            border: none;
-            font-size: 28px;
-            cursor: pointer;
-            color: #94a3b8;
-            line-height: 1;
-        }
+    .info-box-modal {
+        background-color: #f8fafc;
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px dashed #cbd5e1;
+        font-size: 13px;
+        color: #475569;
+        margin-bottom: 15px;
+        line-height: 1.5;
+    }
 
-        .btn-close:hover {
-            color: #64748b;
-        }
+    @media screen and (max-width: 1024px) {
+        .table-container { padding: 12px; overflow-x: auto; }
+        table { min-width: 850px; }
+    }
+</style>
+@endpush
 
-        .form-group {
-            margin-bottom: 18px;
-        }
+@section('konten')
 
-        .form-group label {
-            display: block;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: #334155;
-        }
+    @if(session('sukses'))
+        <div style="background-color: #d1fae5; color: #065f46; padding: 16px; border-radius: 8px; font-weight: 600; border: 1px solid #a7f3d0; margin-bottom: 15px;">
+            {{ session('sukses') }}
+        </div>
+    @endif
 
-        .form-group input[type="text"],
-        .form-group input[type="date"] {
-            width: 100%;
-            padding: 10px 14px;
-            border: 1px solid #cbd5e1;
-            border-radius: 8px;
-            font-size: 14px;
-            outline: none;
-        }
+    @if(session('eror'))
+        <div style="background-color: #fee2e2; color: #991b1b; padding: 16px; border-radius: 8px; font-weight: 600; border: 1px solid #fca5a5; margin-bottom: 15px;">
+            {{ session('eror') }}
+        </div>
+    @endif
 
-        .form-group input:focus {
-            border-color: #38bdf8;
-        }
-
-        .btn-simpan {
-            width: 100%;
-            background-color: #38bdf8;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 10px;
-            font-size: 15px;
-        }
-
-        /* ==========================================================================
-           TAMBAHAN CODE UNTUK RESPONSIVE (TIDAK MERUBAH TAMPILAN DESKTOP ASLI)
-           ========================================================================== */
-
-        /* Menu Khusus Tampilan Mobile (Default: Tersembunyi di Desktop) */
-        .mobile-nav {
-            display: none;
-            background-color: #1e293b;
-            padding: 10px 15px;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .mobile-nav h2 {
-            font-size: 16px;
-            color: #38bdf8;
-        }
-        .mobile-menu-links {
-            display: flex;
-            gap: 8px;
-        }
-        .mobile-menu-links a {
-            color: #94a3b8;
-            text-decoration: none;
-            font-size: 12px;
-            padding: 6px 10px;
-            border-radius: 6px;
-        }
-        .mobile-menu-links a.active {
-            background-color: #334155;
-            color: #fff;
-        }
-
-        /* Media Query untuk Layar Gadget / HP / Tablet (Lebar Maksimal 768px) */
-        @media screen and (max-width: 768px) {
-            body {
-                flex-direction: column;
-                height: auto;
-                overflow: auto;
-            }
-
-            .sidebar {
-                display: none; /* Sembunyikan sidebar bawaan desktop */
-            }
-
-            .mobile-nav {
-                display: flex; /* Aktifkan menu bar atas di mobile */
-                position: sticky;
-                top: 0;
-                z-index: 999;
-            }
-
-            .main-content {
-                padding: 15px;
-                gap: 15px;
-            }
-
-            .header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 5px;
-            }
-
-            .btn-aksi {
-                width: 100%; /* Tombol registrasi memanjang penuh di layar HP */
-                text-align: center;
-                padding: 12px;
-                font-size: 14px;
-            }
-
-            /* Membungkus data tabel member agar bisa digeser horizontal */
-            .table-container {
-                padding: 12px;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-
-            table {
-                min-width: 650px; /* Menjaga struktur kolom data member agar tidak gepeng */
-            }
-
-            th, td {
-                padding: 10px 12px;
-                font-size: 13px;
-            }
-
-            /* Fleksibilitas kotak modal input di HP */
-            .modal-box {
-                width: 90%;
-                padding: 20px;
-            }
-        }
-    </style>
-</head>
-<body>
-
-    <div class="mobile-nav">
-        <h2>GYM KASIR</h2>
-        <div class="mobile-menu-links">
-            <a href="{{ url('/') }}" class="{{ Request::is('/') ? 'active' : '' }}">Dashboard</a>
-            <a href="{{ route('member.index') }}" class="{{ Route::is('member.*') || Request::is('member*') ? 'active' : '' }}">Member</a>
-            <a href="{{ route('transaksi.index') }}" class="{{ Route::is('transaksi.*') || Request::is('transaksi*') ? 'active' : '' }}">Transaksi</a>
+    <div class="top-bar">
+        <button class="btn-tambah" onclick="bukaModalTambah()">[+] DAFTARKAN MEMBER BARU VIA FORM</button>
+        
+        <div class="filter-box">
+            <form action="{{ route('member.index') }}" method="GET">
+                <input type="text" name="cari" class="input-filter" placeholder="Cari nama member..." value="{{ request('cari') }}">
+                <button type="submit" class="btn-filter">Cari</button>
+            </form>
         </div>
     </div>
 
-    <div class="sidebar">
-        <h2>GYM KASIR</h2>
-        <a href="{{ url('/') }}" class="{{ Request::is('/') ? 'active' : '' }}">Dashboard</a>
-        <a href="{{ route('member.index') }}" class="{{ Route::is('member.*') || Request::is('member*') ? 'active' : '' }}">Data Member</a>
-        <a href="{{ route('transaksi.index') }}" class="{{ Route::is('transaksi.*') || Request::is('transaksi*') ? 'active' : '' }}">Catatan Transaksi</a>
-    </div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Nama Member</th>
+                    <th>No. Telepon</th>
+                    <th>Masa Aktif Berakhir</th>
+                    <th>Status / Sisa Hari</th>
+                    <th>Total Gym (Check-in)</th>
+                    <th>Aksi Khusus Kasir</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($daftarMember as $index => $row)
+                @php
+                    // Logika menghitung sisa hari masa aktif member
+                    $tanggalSekarang = \Carbon\Carbon::today();
+                    $tanggalExpired = \Carbon\Carbon::parse($row->tanggal_kadaluarsa);
+                    $sisaHari = $tanggalSekarang->diffInDays($tanggalExpired, false);
+                @endphp
+                <tr>
+                    <td>{{ $index + 1 }}</td>
+                    <td><strong>{{ $row->nama_member }}</strong></td>
+                    <td>{{ $row->nomor_telepon }}</td>
+                    <td>{{ date('d M Y', strtotime($row->tanggal_kadaluarsa)) }}</td>
+                    <td>
+                        @if($sisaHari >= 0)
+                            <span class="badge badge-aktif">🟢 Aktif ({{ $sisaHari }} Hari Lagi)</span>
+                        @else
+                            <span class="badge badge-habis">🔴 Habis (Lewat {{ abs($sisaHari) }} Hari)</span>
+                        @endif
+                    </td>
+                    <td><span style="font-weight: 700; color: #475569;">🔑 {{ $row->total_checkin ?? 0 }} x</span></td>
+                    <td>
+                        <div class="action-btns">
+                            @if($sisaHari >= 0)
+                            <form action="{{ route('member.checkin', $row->id) }}" method="POST" onsubmit="return confirm('Proses Check-In masuk gym untuk member {{ $row->nama_member }}?')">
+                                @csrf
+                                <button type="submit" class="btn-action btn-checkin">Check-In</button>
+                            </form>
+                            @else
+                            <button class="btn-action btn-checkin" style="background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed;" title="Masa aktif habis, silakan perpanjang!" disabled>Check-In</button>
+                            @endif
 
-    <div class="main-content">
-        @if(session('sukses'))
-                <div style="background-color: #d1fae5; color: #065f46; padding: 16px; border-radius: 8px; font-weight: 600; border: 1px solid #a7f3d0; margin-bottom: 15px; width: 100%;">
-                    {{ session('sukses') }}
-                </div>
-        @endif
+                            <button class="btn-action btn-perpanjang" data-member="{{ json_encode($row) }}" onclick="bukaModalPerpanjang(JSON.parse(this.getAttribute('data-member')))">Perpanjang</button>
 
-        @if(session('gagal'))
-            <div style="background-color: #fee2e2; color: #991b1b; padding: 16px; border-radius: 8px; font-weight: 600; border: 1px solid #fca5a5; margin-bottom: 15px;">
-                {{ session('gagal') }}
-            </div>
-        @endif
-        <div class="header">
-            <h1>Data Member Terdaftar</h1>
-            <span>Admin: <strong>FRAZA</strong></span>
-        </div>
-
-        <div class="action-area">
-            <button class="btn-aksi" id="btnBukaModal">[+] DAFTARKAN MEMBER BARU VIA FORM</button>
-        </div>
-
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>No</th>
-                        <th>Nama Member</th>
-                        <th>No. Telepon</th>
-                        <th>Masa Aktif Berakhir</th>
-                        <th>Status / Sisa Hari</th>
-                        <th>Total Gym (Check-in)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($daftarMember as $index => $member)
-                        <tr>
-                            <td>{{ $index + 1 }}</td>
-                            <td><strong>{{ $member->nama_member }}</strong></td>
-                            <td>{{ $member->nomor_telepon }}</td>
-                            <td>{{ date('d M Y', strtotime($member->tanggal_kadaluarsa)) }}</td>
-                            <td>
-                                @if($member->sisa_hari === 'HABIS')
-                                    <span class="badge badge-habis">Masa Aktif Habis</span>
-                                @else
-                                    <span class="badge badge-aktif">{{ $member->sisa_hari }}</span>
-                                @endif
-                            </td>
-                            <td>{{ $member->absensi->count() }} Kali Datang</td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">
-                                Belum ada data member terdaftar di database.
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                            <button class="btn-action btn-edit" data-member="{{ json_encode($row) }}" onclick="bukaModalEdit(JSON.parse(this.getAttribute('data-member')))">Edit</button>
+                            
+                            <form action="{{ route('member.destroy', $row->id) }}" method="POST" onsubmit="return confirm('Hapus total keanggotaan member ini dari sistem?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn-action btn-hapus">Hapus</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">
+                        Belum ada data member terdaftar di database.
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 
     <div class="modal-overlay" id="modalMember">
         <div class="modal-box">
             <div class="modal-header">
-                <h2>Form Registrasi Member Baru</h2>
-                <button class="btn-close" id="btnTutupModal">&times;</button>
+                <h2 id="modalTitle">Pendaftaran Member Baru</h2>
+                <button class="btn-close" onclick="tutupModal()">&times;</button>
             </div>
             
-            <form action="{{ route('transaksi.simpan') }}" method="POST">
+            <form id="formMember" action="" method="POST">
                 @csrf
+                <div id="methodField"></div>
                 
-                <div class="form-group">
-                    <label>Nama Lengkap:</label>
-                    <input type="text" name="nama" placeholder="Nama lengkap calon member..." required>
+                <div id="infoBoxPerpanjang" class="info-box-modal" style="display: none;"></div>
+
+                <div class="form-group" id="groupNama">
+                    <label>Nama Lengkap Member:</label>
+                    <input type="text" name="nama_member" id="inputNama" placeholder="Nama lengkap..." required>
                 </div>
 
-                <div class="form-group">
-                    <label>No. Telepon (WhatsApp):</label>
-                    <input type="text" name="nomor_telepon" placeholder="Contoh: 0812345xxxx" required>
+                <div class="form-group" id="groupTelepon">
+                    <label>No. HP / WhatsApp:</label>
+                    <input type="text" name="nomor_telepon" id="inputTelepon" placeholder="Contoh: 08123xxxx" required>
                 </div>
 
-                <input type="hidden" name="tipe_kunjungan" value="baru">
-                <input type="hidden" name="nominal" value="100000">
+                <div class="form-group" id="groupNominal">
+                    <label id="labelNominal">Nominal Pembayaran Awal (Rp):</label>
+                    <input type="number" name="nominal" id="inputNominal" value="100000" required>
+                </div>
 
-                <button type="submit" class="btn-simpan">DAFTARKAN MEMBER</button>
+                <div class="form-group" id="groupKadaluarsa" style="display: none;">
+                    <label>Tanggal Kadaluarsa (Manual Tweak):</label>
+                    <input type="date" name="tanggal_kadaluarsa" id="inputKadaluarsa">
+                </div>
+
+                <div class="info-box-modal" id="infoBoxSistem">
+                    💡 <strong>Info Kasir:</strong> Pendaftaran member baru otomatis akan memberikan durasi aktif selama <strong>30 Hari Kedepan</strong> sejak hari ini.
+                </div>
+
+                <button type="submit" class="btn-simpan" id="btnSubmitForm" style="background-color: #10b981;">PROSES DATA</button>
             </form>
         </div>
     </div>
 
-    <script>
-        const modal = document.getElementById('modalMember');
-        const btnBuka = document.getElementById('btnBukaModal');
-        const btnTutup = document.getElementById('btnTutupModal');
+@endsection
 
-        btnBuka.addEventListener('click', () => modal.classList.add('show'));
-        btnTutup.addEventListener('click', () => modal.classList.remove('show'));
-    </script>
-</body>
-</html>
+@push('scripts')
+<script>
+    const modal = document.getElementById('modalMember');
+    const form = document.getElementById('formMember');
+    const modalTitle = document.getElementById('modalTitle');
+    const methodField = document.getElementById('methodField');
+    const btnSubmit = document.getElementById('btnSubmitForm');
+    
+    const groupNama = document.getElementById('groupNama');
+    const groupTelepon = document.getElementById('groupTelepon');
+    const groupNominal = document.getElementById('groupNominal');
+    const groupKadaluarsa = document.getElementById('groupKadaluarsa');
+    const labelNominal = document.getElementById('labelNominal');
+    
+    const infoBoxPerpanjang = document.getElementById('infoBoxPerpanjang');
+    const infoBoxSistem = document.getElementById('infoBoxSistem');
+
+    const inputNama = document.getElementById('inputNama');
+    const inputTelepon = document.getElementById('inputTelepon');
+    const inputNominal = document.getElementById('inputNominal');
+    const inputKadaluarsa = document.getElementById('inputKadaluarsa');
+
+    function bukaModalTambah() {
+        modalTitle.innerText = "Daftarkan Member Baru";
+        form.action = "{{ route('member.store') }}";
+        methodField.innerHTML = "";
+        btnSubmit.innerText = "DAFTARKAN MEMBER (BAYAR BULANAN)";
+        btnSubmit.style.backgroundColor = "#10b981";
+
+        // Tampilkan input bawaan tambah
+        groupNama.style.display = "block";
+        groupTelepon.style.display = "block";
+        groupNominal.style.display = "block";
+        groupKadaluarsa.style.display = "none";
+        infoBoxPerpanjang.style.display = "none";
+        
+        labelNominal.innerText = "Nominal Pembayaran Awal (Rp):";
+        infoBoxSistem.innerHTML = "💡 <strong>Info Kasir:</strong> Pendaftaran member baru otomatis akan memberikan durasi aktif selama <strong>30 Hari Kedepan</strong> sejak hari ini.";
+
+        inputNama.value = "";
+        inputTelepon.value = "";
+        inputNominal.value = "100000";
+        inputNama.required = true;
+        inputTelepon.required = true;
+
+        modal.classList.add('show');
+    }
+
+    function bukaModalEdit(data) {
+        modalTitle.innerText = "Edit Biodata Member";
+        form.action = "/member/" + data.id;
+        methodField.innerHTML = `@method('PUT')`;
+        btnSubmit.innerText = "PERBARUI BIODATA";
+        btnSubmit.style.backgroundColor = "#f59e0b";
+
+        groupNama.style.display = "block";
+        groupTelepon.style.display = "block";
+        groupNominal.style.display = "none"; // Sembunyikan pembayaran saat edit teks biasa
+        groupKadaluarsa.style.display = "block";
+        infoBoxPerpanjang.style.display = "none";
+        infoBoxSistem.innerHTML = "⚠️ <strong>Perhatian:</strong> Mengubah tanggal kadaluarsa secara manual akan langsung memotong/menambah masa aktif member tanpa mencatat transaksi keuangan baru.";
+
+        inputNama.value = data.nama_member;
+        inputTelepon.value = data.nomor_telepon;
+        inputKadaluarsa.value = data.tanggal_kadaluarsa;
+        inputNama.required = true;
+        inputTelepon.required = true;
+
+        modal.classList.add('show');
+    }
+
+    function bukaModalPerpanjang(data) {
+        modalTitle.innerText = "Perpanjang Masa Aktif Bulanan";
+        form.action = "/member/perpanjang/" + data.id;
+        methodField.innerHTML = "";
+        btnSubmit.innerText = "KONFIRMASI PERPANJANG";
+        btnSubmit.style.backgroundColor = "#38bdf8";
+
+        // Sembunyikan input nama & hp karena cuma mau bayar iuran perpanjang
+        groupNama.style.display = "none";
+        groupTelepon.style.display = "none";
+        groupKadaluarsa.style.display = "none";
+        
+        groupNominal.style.display = "block";
+        labelNominal.innerText = "Biaya Perpanjang Bulanan (Rp):";
+        
+        infoBoxPerpanjang.style.display = "block";
+        infoBoxPerpanjang.innerHTML = `
+            👤 <strong>Member:</strong> ${data.nama_member} <br>
+            📞 <strong>No. Telp:</strong> ${data.nomor_telepon} <br>
+            📅 <strong>Masa Aktif Sekarang:</strong> ${data.tanggal_kadaluarsa}
+        `;
+        
+        infoBoxSistem.innerHTML = "⚙️ <strong>Sistem Otomatis:</strong> Eksekusi tombol ini akan memperpanjang masa expired member selama <strong>+30 Hari</strong> secara akumulatif, serta otomatis mencatatkan uang masuk ke laporan kas keuangan!";
+
+        inputNama.required = false;
+        inputTelepon.required = false;
+        inputNominal.value = "100000";
+
+        modal.classList.add('show');
+    }
+
+    function tutupModal() {
+        modal.classList.remove('show');
+    }
+</script>
+@endpush
