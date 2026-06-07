@@ -1,84 +1,100 @@
 <?php
+
 namespace App\Http\Controllers;
+
 use Illuminate\Http\Request;
 use App\Models\Pelatih;
+use App\Models\Transaksi;
+use App\Models\PenggunaPelatih;
 
 class PelatihController extends Controller
 {
-    /**
-     * Tampilkan daftar pelatih / trainer dengan fitur pencarian nama.
-     */
     public function index(Request $request)
     {
-        $query = Pelatih::query();
+        $cari = $request->input('cari');
 
-        // Fitur Pencarian berdasarkan nama pelatih
-        if ($request->has('cari') && $request->cari != '') {
-            $query->where('nama_pelatih', 'LIKE', '%' . $request->cari . '%');
-        }
+        // Ambil data pelatih dengan fitur pencarian nama
+        $daftarPelatih = Pelatih::when($cari, function($query) use ($cari) {
+            return $query->where('nama_pelatih', 'like', '%'.$cari.'%');
+        })->get();
 
-        // Ambil data pelatih dan urutkan berdasarkan abjad nama A-Z
-        $daftarPelatih = $query->orderBy('nama_pelatih', 'asc')->get();
+        // Ambil semua data pengguna pelatih untuk tabel kedua
+        $daftarPengguna = PenggunaPelatih::with('pelatih')->get();
 
-        // Lempar data ke halaman blade view pelatih
-        return view('pelatih', compact('daftarPelatih'));
+        return view('pelatih', [
+            'daftarPelatih' => $daftarPelatih,
+            'daftarPengguna' => $daftarPengguna
+        ]);
     }
 
-    /**
-     * Proses simpan data pelatih baru (Menembak ke route pelatih.store).
-     */
     public function store(Request $request)
     {
-        // Validasi input dari form modal tambah pelatih
         $request->validate([
-            'nama_pelatih'    => 'required|string|max:255',
-            'nomor_telepon'   => 'required|string|max:20',
-            'tarif_per_bulan' => 'required|numeric',
+            'nama_pelatih'  => 'required|string|max:255',
+            'nomor_telepon' => 'required|string|max:20',
+            'tarif_bulanan' => 'required|numeric',
+            'tarif_harian'  => 'required|numeric',
+            'status_hadir'  => 'required|in:hadir,tidak_hadir',
         ]);
 
-        // Simpan data pelatih ke database menggunakan mass assignment
-        Pelatih::create([
-            'nama_pelatih'    => $request->nama_pelatih,
-            'nomor_telepon'   => $request->nomor_telepon,
-            'tarif_per_bulan' => $request->tarif_per_bulan,
-        ]);
+        Pelatih::create($request->all());
 
-        // Redirect kembali ke halaman index resource dengan flash message sukses
-        return redirect()->route('pelatih.index')->with('sukses', 'Data pelatih baru berhasil ditambahkan!');
+        return redirect()->route('pelatih.index')->with('sukses', 'Data pelatih baru berhasil disimpan.');
     }
 
-    /**
-     * Proses perbarui data pelatih (Menembak ke route pelatih.update via PUT).
-     */
     public function update(Request $request, string $id)
     {
-        // Validasi input data edit pelatih
         $request->validate([
-            'nama_pelatih'    => 'required|string|max:255',
-            'nomor_telepon'   => 'required|string|max:20',
-            'tarif_per_bulan' => 'required|numeric',
+            'nama_pelatih'  => 'required|string|max:255',
+            'nomor_telepon' => 'required|string|max:20',
+            'tarif_bulanan' => 'required|numeric',
+            'tarif_harian'  => 'required|numeric',
+            'status_hadir'  => 'required|in:hadir,tidak_hadir',
         ]);
 
-        // Cari data pelatih berdasarkan id, lalu eksekusi update data
         $pelatih = Pelatih::findOrFail($id);
-        $pelatih->update([
-            'nama_pelatih'    => $request->nama_pelatih,
-            'nomor_telepon'   => $request->nomor_telepon,
-            'tarif_per_bulan' => $request->tarif_per_bulan,
-        ]);
+        $pelatih->update($request->all());
 
-        return redirect()->route('pelatih.index')->with('sukses', 'Data pelatih berhasil diperbarui!');
+        return redirect()->route('pelatih.index')->with('sukses', 'Data profil pelatih berhasil diperbarui.');
     }
 
-    /**
-     * Proses hapus data pelatih (Menembak ke route pelatih.destroy via DELETE).
-     */
-    public function destroy(string$id)
+    public function destroy(string $id)
     {
-        // Cari data pelatih berdasarkan id, lalu eksekusi penghapusan data
-        $pelatih = Pelatih::findOrFail($id);
-        $pelatih->delete();
+        Pelatih::destroy($id);
+        return redirect()->route('pelatih.index')->with('sukses', 'Data pelatih berhasil dihapus.');
+    }
 
-        return redirect()->route('pelatih.index')->with('sukses', 'Data pelatih berhasil dihapus dari sistem!');
+    // --- FUNGSI KHUSUS UNTUK MENANGANI DATA SEWA PENGGUNA ---
+    
+    public function storePengguna(Request $request)
+{
+    $request->validate([
+        'nama_pengguna'           => 'required|string|max:255',
+        'nomor_telepon_pengguna'  => 'required|string|max:20',
+        'pelatih_id'              => 'required|exists:pelatih,id',
+        'tipe_jasa'               => 'required|in:perbulan,perhari',
+        'tarif_jasa'              => 'required|numeric',
+    ]);
+
+    // 1. Simpan ke tabel pengguna pelatih
+    $pengguna = PenggunaPelatih::create($request->all());
+
+    // 🛠️ TENTUKAN TIPE TRANSAKSI SECARA SPESIFIK UNTUK PT
+    $tipeTransaksiPT = $request->tipe_jasa == 'perbulan' ? 'SEWA PELATIH' : 'SEWA PELATIH';
+
+    // 2. MASUK KE CATATAN TRANSAKSI DENGAN TIPE YANG BENAR
+    Transaksi::create([
+        'nama_pelanggan' => $request->nama_pengguna,
+        'nomor_telepon'  => $request->nomor_telepon_pengguna,
+        'tipe_transaksi' => $tipeTransaksiPT, // Hasilnya: 'Sewa PT Perbulan' atau 'Sewa PT Perhari'
+        'nominal'        => $request->tarif_jasa,
+    ]);
+
+    return redirect()->route('pelatih.index')->with('sukses', 'Penyewaan jasa pelatih baru berhasil dicatat dan masuk laporan keuangan.');
+}
+    public function destroyPengguna(string $id)
+    {
+        PenggunaPelatih::destroy($id);
+        return redirect()->route('pelatih.index')->with('sukses', 'Data sewa pengguna berhasil dihapus.');
     }
 }

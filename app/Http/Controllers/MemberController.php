@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Http\Controllers;
+
 use Illuminate\Http\Request;
 use App\Models\Member;
 use App\Models\Transaksi;
@@ -21,6 +23,10 @@ class MemberController extends Controller
         $daftarMember = $query->orderBy('nama_member', 'asc')->get();
         return view('member', compact('daftarMember'));
     }
+
+    /**
+     * Daftarkan member baru / perpanjang otomatis via form pendaftaran.
+     */
     public function store(Request $request)
     {
         $request->validate([
@@ -48,11 +54,11 @@ class MemberController extends Controller
                 'tanggal_kadaluarsa' => Carbon::today()->addDays(30)
             ]);
 
-            // Catat uangnya sebagai transaksi iuran perpanjang otomatis via form
+            // 🛠️ PERBAIKAN: Mengubah tipe_transaksi menjadi 'Perpanjang Member' agar terbaca di dashboard
             Transaksi::create([
                 'nama_pelanggan' => $memberLama->nama_member,
                 'nomor_telepon'  => $memberLama->nomor_telepon,
-                'tipe_transaksi' => 'Perpanjang Member (Auto via Form)',
+                'tipe_transaksi' => 'Perpanjang',
                 'nominal'        => $request->nominal,
             ]);
 
@@ -67,11 +73,11 @@ class MemberController extends Controller
             'total_checkin'      => 0,
         ]);
 
-        // Catat sebagai transaksi member baru
+        // 🛠️ PERBAIKAN: Mengubah tipe_transaksi menjadi 'Pendaftaran Member' agar terbaca di dashboard
         Transaksi::create([
             'nama_pelanggan' => $request->nama_member,
             'nomor_telepon'  => $request->nomor_telepon,
-            'tipe_transaksi' => 'Member Baru',
+            'tipe_transaksi' => 'Baru',
             'nominal'        => $request->nominal,
         ]);
 
@@ -113,19 +119,24 @@ class MemberController extends Controller
     /**
      * 🔥 FUNGSI CHECK-IN MEMBER
      */
-    /**
-     * FUNGSI CHECK-IN MEMBER
-     */
     public function checkin(string $id)
     {
         $member = Member::findOrFail($id);
         
         if (Carbon::parse($member->tanggal_kadaluarsa)->isPast()) {
-            return redirect()->route('member.index')->with('eror', 'Gagal Check-In! Masa aktif member ini sudah habis, jirr.');
+            return redirect()->route('member.index')->with('eror', 'Gagal Check-In! Masa aktif member ini sudah habis.');
         }
 
-        // 🛠️ SINKRONKAN NAMANYA: total_checkin
+        // Sinkronkan hitungan total check-in member
         $member->increment('total_checkin'); 
+
+        // 🛠️ PERBAIKAN: Mencatat aktivitas log kedatangan harian ke tabel transaksi (Nominal 0 karena tidak ada transaksi uang baru)
+        Transaksi::create([
+            'nama_pelanggan' => $member->nama_member,
+            'nomor_telepon'  => $member->nomor_telepon,
+            'tipe_transaksi' => 'Check-In Member',
+            'nominal'        => 0,
+        ]);
 
         return redirect()->route('member.index')->with('sukses', 'Check-In berhasil! Selamat berlatih untuk ' . $member->nama_member);
     }
@@ -142,8 +153,6 @@ class MemberController extends Controller
         $member = Member::findOrFail($id);
         $expiredLama = Carbon::parse($member->tanggal_kadaluarsa);
 
-        // Jika member diperpanjang SEBELUM masa aktif habis, tambahkan 30 hari dari tanggal expired lamanya.
-        // Jika sudah terlanjur lewat/habis, tambahkan 30 hari dimulai dari HARI INI.
         if ($expiredLama->isPast()) {
             $expiredBaru = Carbon::today()->addDays(30);
         } else {
@@ -156,6 +165,7 @@ class MemberController extends Controller
         ]);
 
         // 2. Catat iuran bulanan tersebut ke riwayat transaksi kas keuangan
+        // 🛠️ PERBAIKAN: Dipastikan string tipe_transaksi bernilai 'Perpanjang Member' agar sinkron dengan pembacaan widget dashboard
         Transaksi::create([
             'nama_pelanggan' => $member->nama_member,
             'nomor_telepon'  => $member->nomor_telepon,

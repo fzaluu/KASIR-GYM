@@ -11,11 +11,14 @@ return new class extends Migration
      */
     public function up(): void
 {
-    Schema::create('pelatihs', function (Blueprint $table) {
+    Schema::create('pelatih', function (Blueprint $table) {
         $table->id();
-        $table->string('nama_pelatih');
-        $table->string('nomor_telepon');
-        $table->integer('tarif_per_bulan');
+        $table->string('nama_pelatih', 100);
+        $table->string('nomor_telepon', 15);
+        $table->integer('tarif_bulanan')->default(200000);
+        $table->integer('tarif_harian')->default(20000);
+        // Status absensi harian pelatih
+        $table->enum('status_hadir', ['hadir', 'tidak_hadir'])->default('hadir');
         $table->timestamps();
     });
 }

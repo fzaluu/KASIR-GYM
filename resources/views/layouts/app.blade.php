@@ -20,7 +20,6 @@
             min-height: 100vh;
         }
 
-        /* 💻 SIDEBAR LEFT DESKTOP (KEMBALI KE STYLE LAMA KAMU) */
         .sidebar-kiri {
             width: 260px;
             background-color: #1e293b;
@@ -51,7 +50,7 @@
         }
 
         .sidebar-kiri h2 {
-            font-size: 20px;     /* Sedikit diperkecil agar proporsional dengan logo */
+            font-size: 20px;   
             color: #38bdf8;
             letter-spacing: 1.5px;
             text-align: center;
@@ -82,7 +81,6 @@
             color: #fff;
         }
 
-        /* Teks pemisah kategori di desktop (opsional agar rapi) */
         .menu-kategori {
             font-size: 11px;
             color: #64748b;
@@ -92,7 +90,6 @@
             font-weight: 600;
         }
 
-        /* 📱 NAVBAR MOBILE (HANYA 3 MENU UTAMA DENGAN DROPDOWN) */
         .mobile-nav {
             display: none;
             background-color: #1e293b;
@@ -105,11 +102,10 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
-        /* Container untuk menyatukan teks h2 dan logo di sebelah kanan secara horizontal */
         .mobile-brand {
             display: flex;
             align-items: center;
-            gap: 8px; /* Jarak antara teks dan logo di mobile */
+            gap: 8px; 
         }
         
         .mobile-brand h2 {
@@ -120,7 +116,7 @@
         }
 
         .mobile-logo {
-            width: 32px; /* Ukuran logo kecil yang pas untuk navbar HP */
+            width: 32px; 
             height: auto;
             filter: drop-shadow(0px 0px 4px rgba(255, 255, 255, 0.3));
         }
@@ -151,11 +147,11 @@
             color: #fff;
         }
 
-        /* 📐 ANIMASI PANAH SEGITIGA DROPDOWN MOBILE */
+       
         .panah-icon {
             display: inline-block;
             transition: transform 0.3s ease;
-            transform: rotate(180deg); /* Default menghadap ke atas ketika belum aktif */
+            transform: rotate(180deg); 
             font-size: 10px;
         }
 

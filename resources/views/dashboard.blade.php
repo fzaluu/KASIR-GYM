@@ -5,11 +5,12 @@
 
 @push('styles')
 <style>
-    /* Grid untuk Kotak Informasi (Atas) */
+    /* 🛠️ PERBAIKAN GRID: Diubah menjadi repeat(3, 1fr) agar muat 3 card sejajar secara horizontal */
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 20px;
+        margin-bottom: 25px; /* Memberi jarak aman ke tombol di bawahnya */
     }
 
     .card {
@@ -38,6 +39,7 @@
     .action-area {
         display: flex;
         justify-content: flex-start;
+        margin-bottom: 25px;
     }
 
     .btn-aksi {
@@ -218,7 +220,15 @@
     }
 
     /* CSS Responsive Dashboard di HP */
+    @media screen and (max-width: 1024px) {
+        /* Untuk tablet, bagi menjadi 2 kolom atau biarkan proporsional */
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
     @media screen and (max-width: 768px) {
+        /* 🛠️ PERBAIKAN RESPONSIVE: Mengembalikan grid ke 1 kolom penuh saat layar HP */
         .stats-grid {
             grid-template-columns: 1fr;
             gap: 12px;
@@ -250,7 +260,7 @@
 @section('konten')
     
     @if(session('sukses'))
-        <div style="background-color: #d1fae5; color: #065f46; padding: 16px; border-radius: 8px; font-weight: 600; border: 1px solid #a7f3d0;">
+        <div style="background-color: #d1fae5; color: #065f46; padding: 16px; border-radius: 8px; font-weight: 600; border: 1px solid #a7f3d0; margin-bottom: 15px;">
             {{ session('sukses') }}
         </div>
     @endif
@@ -262,12 +272,16 @@
 
     <div class="stats-grid">
         <div class="card">
-            <h3>Pemasukan Hari Ini</h3>
-            <p>Rp{{ number_format($totalpemasukan, 0, ',','.') }}</p>
+            <h3>Total Pelatih</h3>
+            <p>{{ $totalpelatih }} Orang</p>
         </div>
         <div class="card">
             <h3>Total Member Aktif</h3>
             <p>{{ $totalmemberaktif }} Orang</p>
+        </div>
+        <div class="card">
+            <h3>Pemasukan Hari Ini</h3>
+            <p>Rp {{ number_format($totalpemasukan, 0, ',', '.') }}</p>
         </div>
     </div>
 
@@ -292,14 +306,19 @@
                     <td>{{ $item->created_at->format('H:i') }}</td>
                     <td>{{ $item->tipe_transaksi }} ({{ $item->nama_pelanggan }})</td>
                     <td>
+                        {{-- 🛠️ MENYINKRONKAN KATA KUNCI LOG AGAR SESUAI DENGAN ATURAN INPUT BARU --}}
                         @if($item->tipe_transaksi == 'Harian')
-                            Tiket Masuk Harian
-                        @elseif($item->tipe_transaksi == 'Checkin')
+                             Masuk Harian
+                        @elseif($item->tipe_transaksi == 'Check-In Member' || $item->tipe_transaksi == 'Checkin')
                             Check-in Member Lama    
-                        @elseif($item->tipe_transaksi == 'Perpanjang')
+                        @elseif($item->tipe_transaksi == 'Perpanjang Member' || $item->tipe_transaksi == 'Perpanjang')
                             Perpanjang Member    
-                        @elseif($item->tipe_transaksi == 'Baru')
+                        @elseif($item->tipe_transaksi == 'Pendaftaran Member' || $item->tipe_transaksi == 'Baru')
                             Pendaftaran Member Baru
+                        @elseif($item->tipe_transaksi == 'Sewa PT Perbulan' || $item->tipe_transaksi == 'sewa_bulanan')
+                            Sewa PT Bulanan
+                        @elseif($item->tipe_transaksi == 'Sewa PT Perhari' || $item->tipe_transaksi == 'sewa_perhari')
+                            Sewa PT Harian
                         @else
                             Tipe Tidak Diketahui
                         @endif
@@ -308,7 +327,7 @@
                         @if($item->nominal == 0)
                             -
                         @else
-                            Rp {{ number_format($item->nominal, 0, ',','.') }}
+                            Rp {{ number_format($item->nominal, 0, ',', '.') }}
                         @endif
                     </td>
                 </tr>
@@ -369,11 +388,9 @@
     const inputNominal = document.getElementById('inputNominal');
     const fieldNominal = inputNominal.querySelector('input');
 
-    // Buka dan tutup modal utama dashboard
     btnBuka.addEventListener('click', () => modal.classList.add('show'));
     btnTutup.addEventListener('click', () => modal.classList.remove('show'));
 
-    // Pengendali Perubahan Pilihan Aksi Form
     radioTipe.forEach(radio => {
         radio.addEventListener('change', (e) => {
             if (e.target.value === 'harian') {

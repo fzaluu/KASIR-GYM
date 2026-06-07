@@ -103,6 +103,10 @@
                                 <span class="badge badge-harian">Kunjungan Harian</span>
                             @elseif($trx->tipe_transaksi === 'Baru')
                                 <span class="badge badge-baru">Member Baru</span>
+                            @elseif($trx->tipe_transaksi === 'sewa_bulanan')
+                                <span class="badge badge-baru">Sewa PT Bulanan</span>
+                            @elseif($trx->tipe_transaksi === 'sewa_perhari')
+                                <span class="badge badge-baru">Sewa PT Harian</span>
                             @else
                                 <span class="badge badge-checkin">Check-in Member</span>
                             @endif

@@ -1,167 +1,48 @@
 @extends('layouts.app')
 
-@section('title', 'Data Pelatih - Virgo Gym')
-@section('page_title', 'Manajemen Data Pelatih / Trainer')
+@section('title', 'Manajemen Pelatih & Pengguna - Virgo Gym')
+@section('page_title', 'Manajemen Pelatih & Pengguna Jasa')
 
 @push('styles')
 <style>
-    /* 🔍 TOP BAR: TOMBOL & FILTER CARI */
-    .top-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 15px;
-        flex-wrap: wrap;
-    }
-
-    .btn-tambah {
-        background-color: #38bdf8;
-        color: #fff;
-        border: none;
-        padding: 12px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: background-color 0.2s;
-        box-shadow: 0 4px 6px -1px rgba(56, 189, 248, 0.2);
-    }
+    .top-bar { display: flex; justify-content: flex-start; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; }
+    
+    /* 🏛️ PERBAIKAN UI: Mengatur posisi judul dan tombol di bawahnya (Rata Kiri) */
+    .section-block { margin: 30px 0 15px 0; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+    .section-title { font-size: 18px; font-weight: 700; color: #1e293b; }
+    
+    .btn-tambah { background-color: #38bdf8; color: #fff; border: none; padding: 10px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(56, 189, 248, 0.2); }
     .btn-tambah:hover { background-color: #0ea5e9; }
+    .btn-tambah-user { background-color: #10b981; color: #fff; border: none; padding: 10px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 600; }
+    .btn-tambah-user:hover { background-color: #059669; }
+    
+    .filter-box form { display: flex; gap: 8px; }
+    .input-filter { padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; width: 220px; }
+    .btn-filter { background-color: #475569; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
 
-    /* Kotak Cari Nama Pelatih */
-    .filter-box form {
-        display: flex;
-        gap: 8px;
-    }
-
-    .input-filter {
-        padding: 10px 14px;
-        border: 1px solid #cbd5e1;
-        border-radius: 8px;
-        font-size: 14px;
-        outline: none;
-        background-color: #fff;
-        width: 220px;
-    }
-    .input-filter:focus { border-color: #38bdf8; }
-
-    .btn-filter {
-        background-color: #475569;
-        color: white;
-        border: none;
-        padding: 10px 16px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 14px;
-    }
-    .btn-filter:hover { background-color: #334155; }
-
-    /* 📋 TABLE STYLE */
-    .table-container {
-        background-color: #fff;
-        padding: 24px;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-        border: 1px solid #e2e8f0;
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: left;
-    }
-
-    th, td {
-        padding: 14px 16px;
-        border-bottom: 1px solid #e2e8f0;
-        font-size: 14px;
-    }
-
-    th {
-        background-color: #f8fafc;
-        color: #475569;
-        font-weight: 600;
-    }
-
+    .table-container { background-color: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
+    th { background-color: #f8fafc; color: #475569; font-weight: 600; }
     tr:hover td { background-color: #f8fafc; }
 
-    .action-btns {
-        display: flex;
-        gap: 8px;
-    }
+    .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+    .badge-hadir { background-color: #d1fae5; color: #065f46; }
+    .badge-absen { background-color: #fee2e2; color: #991b1b; }
+    .badge-aktif { background-color: #e0f2fe; color: #0369a1; }
+    .badge-waktu { background-color: #f1f5f9; color: #475569; font-weight: normal; }
 
-    .btn-edit {
-        background-color: #f59e0b;
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    .btn-edit:hover { background-color: #d97706; }
-
-    .btn-hapus {
-        background-color: #ef4444;
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 600;
-    }
-    .btn-hapus:hover { background-color: #dc2626; }
-
-    /* 🏛️ MODAL STYLE */
-    .modal-overlay {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background-color: rgba(15, 23, 42, 0.6);
-        display: flex; justify-content: center; align-items: center;
-        opacity: 0; pointer-events: none;
-        transition: all 0.25s ease; z-index: 999;
-    }
-
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.6); display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: all 0.25s ease; z-index: 999; }
     .modal-overlay.show { opacity: 1; pointer-events: auto; }
-
-    .modal-box {
-        background-color: #fff; padding: 30px; border-radius: 12px;
-        width: 450px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-        transform: scale(0.9); transition: all 0.25s ease;
-    }
-
+    .modal-box { background-color: #fff; padding: 25px; border-radius: 12px; width: 450px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); transform: scale(0.9); transition: all 0.25s ease; }
     .modal-overlay.show .modal-box { transform: scale(1); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+    .btn-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8; }
 
-    .modal-header {
-        display: flex; justify-content: space-between; align-items: center;
-        margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;
-    }
-
-    .modal-header h2 { font-size: 18px; color: #0f172a; }
-    .btn-close { background: none; border: none; font-size: 28px; cursor: pointer; color: #94a3b8; line-height: 1; }
-
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #334155; }
-    .form-group input { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; }
-    .form-group input:focus { border-color: #38bdf8; }
-
-    .btn-simpan {
-        width: 100%; background-color: #10b981; color: white; border: none;
-        padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px;
-    }
-    .btn-simpan:hover { background-color: #059669; }
-
-    @media screen and (max-width: 768px) {
-        .top-bar { flex-direction: column; align-items: stretch; }
-        .filter-box form { width: 100%; }
-        .input-filter { flex: 1; }
-        .btn-filter { width: auto; }
-        .table-container { padding: 12px; overflow-x: auto; }
-        table { min-width: 550px; }
-    }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #334155; }
+    .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; background-color: #fff; box-sizing: border-box; }
+    .form-group input[readonly] { background-color: #f1f5f9; color: #64748b; cursor: not-allowed; }
 </style>
 @endpush
 
@@ -173,25 +54,24 @@
         </div>
     @endif
 
-    <div class="top-bar">
-        <button class="btn-tambah" onclick="bukaModalTambah()">[+] TAMBAH DATA PELATIH</button>
-        
-        <div class="filter-box">
-            <form action="{{ route('pelatih.index') }}" method="GET">
-                <input type="text" name="cari" class="input-filter" placeholder="Cari nama pelatih..." value="{{ request('cari') }}">
-                <button type="submit" class="btn-filter">Cari</button>
-            </form>
-        </div>
-    </div>
+    
 
+    <!-- ================= TABEL 1: DATA MASTER PELATIH ================= -->
+    <div class="section-block">
+        <span class="section-title">🏋️ Daftar Pelatih & Absensi Hari Ini</span>
+        <button class="btn-tambah" onclick="bukaModalPelatih()">[+] TAMBAH DATA PELATIH</button>
+    </div>
+    
     <div class="table-container">
         <table>
             <thead>
                 <tr>
                     <th>No</th>
                     <th>Nama Pelatih</th>
-                    <th>No. Telepon / WA</th>
-                    <th>Tarif / Bulan</th>
+                    <th>No. HP / WA</th>
+                    <th>Tarif Bulanan</th>
+                    <th>Tarif Harian</th>
+                    <th>Status Hadir</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
@@ -201,57 +81,172 @@
                     <td>{{ $index + 1 }}</td>
                     <td><strong>{{ $row->nama_pelatih }}</strong></td>
                     <td>{{ $row->nomor_telepon }}</td>
-                    <td><span style="color: #475569; font-weight: 600;">Rp {{ number_format($row->tarif_per_bulan, 0, ',', '.') }}</span></td>
+                    <td>Rp {{ number_format($row->tarif_bulanan, 0, ',', '.') }}</td>
+                    <td>Rp {{ number_format($row->tarif_harian, 0, ',', '.') }}</td>
                     <td>
-                        <div class="action-btns">
-                           <button class="btn-edit" data-pelatih="{{ json_encode($row) }}" onclick="bukaModalEdit(JSON.parse(this.getAttribute('data-pelatih')))">Edit</button>
-                            
-                            <form action="{{ route('pelatih.destroy', $row->id) }}" method="POST" onsubmit="return confirm('Hapus data pelatih ini?')">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn-hapus">Hapus</button>
-                            </form>
-                        </div>
+                        <span class="badge {{ $row->status_hadir == 'hadir' ? 'badge-hadir' : 'badge-absen' }}">
+                            {{ $row->status_hadir == 'hadir' ? 'Hadir / Melatih' : 'Tidak Hadir' }}
+                        </span>
+                    </td>
+                    <td>
+                        <button style="background-color: #f59e0b; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px;" data-pelatih="{{ json_encode($row) }}" onclick="bukaModalEditPelatih(JSON.parse(this.getAttribute('data-pelatih')))">Edit/Absen</button>
+                        <form action="{{ route('pelatih.destroy', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Hapus data pelatih ini?')">
+                            @csrf @method('DELETE')
+                            <button type="submit" style="background-color: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px;">Hapus</button>
+                        </form>
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">
-                        Data pelatih tidak ditemukan atau belum diinput.
-                    </td>
-                </tr>
+                <tr><td colspan="7" style="text-align: center; color: #94a3b8;">Belum ada data pelatih.</td></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 
+    <!-- ================= TABEL 2: DATA PENGGUNA JASA PELATIH ================= -->
+    <div class="section-block">
+        <span class="section-title">👥 Member yang Menggunakan Jasa Pelatih</span>
+        <button class="btn-tambah-user" onclick="bukaModalPengguna()">[+] DAFTARKAN SEWA PELATIH</button>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Nama Member</th>
+                    <th>No. HP Member</th>
+                    <th>Nama Pelatih</th>
+                    <th>Tipe Jasa</th>
+                    <th>Tarif Terkunci</th>
+                    <th>Status / Masa Aktif</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($daftarPengguna as $index => $user)
+                <tr>
+                    <td>{{ $index + 1 }}</td>
+                    <td><strong>{{ $user->nama_pengguna }}</strong></td>
+                    <td>{{ $user->nomor_telepon_pengguna }}</td>
+                    <td>{{ $user->pelatih->nama_pelatih ?? 'Pelatih Dihapus' }}</td>
+                    <td><span style="text-transform: capitalize; font-weight: 600; color: #4f46e5;">{{ $user->tipe_jasa == 'perbulan' ? 'Bulanan' : 'Harian' }}</span></td>
+                    <td><span style="font-weight: 600; color: #10b981;">Rp {{ number_format($user->tarif_jasa, 0, ',', '.') }}</span></td>
+                    
+                    <!-- 🛠️ PERBAIKAN SISA HARI & TANGGAL WAKTU -->
+                    <td>
+                        @if($user->tipe_jasa == 'perbulan')
+                            @php
+                                $tanggalDaftar = \Carbon\Carbon::parse($user->created_at);
+                                $tanggalSelesai = $tanggalDaftar->copy()->addDays(30);
+                                
+                                // Menggunakan diffInDays dengan parameter false agar menghasilkan angka bulat
+                                // Dan kita pastikan waktunya dihitung dari awal hari (startOfDay) supaya tidak pecah desimal
+                                $sisaHari = now()->startOfDay()->diffInDays($tanggalSelesai->startOfDay(), false);
+                            @endphp
+                            
+                            @if($sisaHari > 0)
+                                <span class="badge badge-aktif">Sisa {{ $sisaHari }} Hari</span>
+                            @else
+                                <span class="badge badge-absen">Habis Kontrak</span>
+                            @endif
+                        @else
+                            <span class="badge badge-waktu">{{ $user->created_at->format('d/m/Y H:i') }} WIB</span>
+                        @endif
+                    </td>
+                    
+                    <td>
+                        <form action="{{ route('pelatih.destroyPengguna', $user->id) }}" method="POST" onsubmit="return confirm('Hapus riwayat sewa member ini?')">
+                            @csrf @method('DELETE')
+                            <button type="submit" style="background-color: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px;">Hapus</button>
+                        </form>
+                    </td>
+                </tr>
+                @empty
+                <tr><td colspan="8" style="text-align: center; color: #94a3b8;">Belum ada member yang menyewa pelatih hari ini.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+
+    <!-- (Bagian Modal HTML 1 & 2 serta Script JS tetap dipertahankan sama seperti kode sebelumnya) -->
+    <!-- ================= MODAL 1: FORM MASTER PELATIH ================= -->
     <div class="modal-overlay" id="modalPelatih">
         <div class="modal-box">
             <div class="modal-header">
-                <h2 id="modalTitle">Tambah Data Pelatih</h2>
-                <button class="btn-close" onclick="tutupModal()">&times;</button>
+                <h2 id="titlePelatih">Tambah Data Pelatih</h2>
+                <button class="btn-close" onclick="tutupModal('modalPelatih')">&times;</button>
             </div>
-            
             <form id="formPelatih" action="" method="POST">
-                @csrf
-                <div id="methodField"></div>
-                
+                @csrf <div id="methodFieldPelatih"></div>
                 <div class="form-group">
                     <label>Nama Lengkap Pelatih:</label>
-                    <input type="text" name="nama_pelatih" id="inputNama" placeholder="Nama lengkap trainer..." required>
+                    <input type="text" name="nama_pelatih" id="nama_pelatih" required>
                 </div>
-
                 <div class="form-group">
                     <label>No. HP / WhatsApp:</label>
-                    <input type="text" name="nomor_telepon" id="inputTelepon" placeholder="Contoh: 08123xxxx" required>
+                    <input type="text" name="nomor_telepon" id="nomor_telepon" required>
                 </div>
-
                 <div class="form-group">
-                    <label>Tarif Jasa per Bulan (Rp):</label>
-                    <input type="number" name="tarif_per_bulan" id="inputTarif" placeholder="Masukkan tarif bulanan..." required>
+                    <label>Tarif Bulanan (Rp):</label>
+                    <input type="number" name="tarif_bulanan" id="tarif_bulanan" value="200000" required>
                 </div>
+                <div class="form-group">
+                    <label>Tarif Harian (Rp):</label>
+                    <input type="number" name="tarif_harian" id="tarif_harian" value="20000" required>
+                </div>
+                <div class="form-group">
+                    <label>Status Kehadiran Hari Ini:</label>
+                    <select name="status_hadir" id="status_hadir">
+                        <option value="hadir">Hadir & Bisa Melatih</option>
+                        <option value="tidak_hadir">Tidak Hadir / Libur</option>
+                    </select>
+                </div>
+                <button type="submit" style="width:100%; padding:12px; border-radius:8px; border:none; background-color:#38bdf8; color:white; font-weight:600; cursor:pointer;" id="btnSubmitPelatih">SIMPAN</button>
+            </form>
+        </div>
+    </div>
 
-                <button type="submit" class="btn-simpan" id="btnSubmitForm">SIMPAN DATA</button>
+    <!-- ================= MODAL 2: FORM PENGGUNA JASA PELATIH ================= -->
+    <div class="modal-overlay" id="modalPengguna">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2>Daftarkan Sewa Pelatih</h2>
+                <button class="btn-close" onclick="tutupModal('modalPengguna')">&times;</button>
+            </div>
+            <form action="{{ route('pelatih.storePengguna') }}" method="POST">
+                @csrf
+                <div class="form-group">
+                    <label>Nama Member (Pengguna):</label>
+                    <input type="text" name="nama_pengguna" required placeholder="Nama member...">
+                </div>
+                <div class="form-group">
+                    <label>No. HP Member:</label>
+                    <input type="text" name="nomor_telepon_pengguna" required placeholder="08xxxx">
+                </div>
+                <div class="form-group">
+                    <label>Pilih Pelatih / Trainer:</label>
+                    <select name="pelatih_id" id="selectPelatih" onchange="hitungTarifOtomatis()" required>
+                        <option value="">-- Pilih Pelatih --</option>
+                        @foreach($daftarPelatih as $p)
+                            @if($p->status_hadir == 'hadir')
+                                <option value="{{ $p->id }}" data-bulanan="{{ $p->tarif_bulanan }}" data-harian="{{ $p->tarif_harian }}">{{ $p->nama_pelatih }}</option>
+                            @endif
+                        @endforeach
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipe Jasa Pelatih:</label>
+                    <select name="tipe_jasa" id="selectTipe" onchange="hitungTarifOtomatis()" required>
+                        <option value="perbulan">Bulanan</option>
+                        <option value="perhari">Harian</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tarif Jasa (Terkunci Otomatis):</label>
+                    <input type="number" name="tarif_jasa" id="tarifTerkunci" readonly required>
+                </div>
+                <button type="submit" style="width:100%; padding:12px; border-radius:8px; border:none; background-color:#10b981; color:white; font-weight:600; cursor:pointer;">PROSES SEWA</button>
             </form>
         </div>
     </div>
@@ -260,44 +255,48 @@
 
 @push('scripts')
 <script>
-    const modal = document.getElementById('modalPelatih');
-    const form = document.getElementById('formPelatih');
-    const modalTitle = document.getElementById('modalTitle');
-    const methodField = document.getElementById('methodField');
-    const btnSubmit = document.getElementById('btnSubmitForm');
-
-    const inputNama = document.getElementById('inputNama');
-    const inputTelepon = document.getElementById('inputTelepon');
-    const inputTarif = document.getElementById('inputTarif');
-
-    function bukaModalTambah() {
-        modalTitle.innerText = "Tambah Pelatih Baru Baru";
-        form.action = "{{ route('pelatih.store') }}"; // Menembak ke rute store bawaan resource pelatih
-        methodField.innerHTML = "";
-        
-        inputNama.value = "";
-        inputTelepon.value = "";
-        inputTarif.value = "";
-        btnSubmit.innerText = "TAMBAH PELATIH";
-        
-        modal.classList.add('show');
+    function bukaModalPelatih() {
+        document.getElementById('titlePelatih').innerText = "Tambah Pelatih Baru";
+        document.getElementById('formPelatih').action = "{{ route('pelatih.store') }}";
+        document.getElementById('methodFieldPelatih').innerHTML = "";
+        document.getElementById('nama_pelatih').value = "";
+        document.getElementById('nomor_telepon').value = "";
+        document.getElementById('tarif_bulanan').value = 200000;
+        document.getElementById('tarif_harian').value = 20000;
+        document.getElementById('status_hadir').value = "hadir";
+        document.getElementById('btnSubmitPelatih').innerText = "SIMPAN DATA";
+        document.getElementById('modalPelatih').classList.add('show');
     }
 
-    function bukaModalEdit(data) {
-        modalTitle.innerText = "Edit Data Pelatih";
-        form.action = "/pelatih/" + data.id; // Menembak ke rute update resource standar (/pelatih/{id})
-        methodField.innerHTML = `@method('PUT')`;
-        
-        inputNama.value = data.nama_pelatih;
-        inputTelepon.value = data.nomor_telepon;
-        inputTarif.value = data.tarif_per_bulan;
-        btnSubmit.innerText = "PERBARUI DATA";
-        
-        modal.classList.add('show');
+    function bukaModalEditPelatih(data) {
+        document.getElementById('titlePelatih').innerText = "Edit & Absen Pelatih";
+        document.getElementById('formPelatih').action = "/pelatih/" + data.id;
+        document.getElementById('methodFieldPelatih').innerHTML = `@method('PUT')`;
+        document.getElementById('nama_pelatih').value = data.nama_pelatih;
+        document.getElementById('nomor_telepon').value = data.nomor_telepon;
+        document.getElementById('tarif_bulanan').value = data.tarif_bulanan;
+        document.getElementById('tarif_harian').value = data.tarif_harian;
+        document.getElementById('status_hadir').value = data.status_hadir;
+        document.getElementById('btnSubmitPelatih').innerText = "PERBARUI DATA";
+        document.getElementById('modalPelatih').classList.add('show');
     }
 
-    function tutupModal() {
-        modal.classList.remove('show');
+    function bukaModalPengguna() { document.getElementById('modalPengguna').classList.add('show'); }
+    function tutupModal(id) { document.getElementById(id).classList.remove('show'); }
+
+    function hitungTarifOtomatis() {
+        const selectPelatih = document.getElementById('selectPelatih');
+        const selectTipe = document.getElementById('selectTipe').value;
+        const inputTarif = document.getElementById('tarifTerkunci');
+        const pilihanTerpilih = selectPelatih.options[selectPelatih.selectedIndex];
+        
+        if (!pilihanTerpilih.value) { inputTarif.value = ""; return; }
+
+        const hargaBulanan = pilihanTerpilih.getAttribute('data-bulanan');
+        const hargaHarian = pilihanTerpilih.getAttribute('data-harian');
+
+        if (selectTipe === 'perbulan') { inputTarif.value = hargaBulanan; } 
+        else if (selectTipe === 'perhari') { inputTarif.value = hargaHarian; }
     }
 </script>
 @endpush

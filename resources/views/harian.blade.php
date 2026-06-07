@@ -250,7 +250,6 @@
                     <th>No</th>
                     <th>Waktu Masuk</th>
                     <th>Nama Pengunjung</th>
-                    <th>No. Telepon / WA</th>
                     <th>Biaya Kunjungan</th>
                     <th>Aksi</th>
                 </tr>
@@ -261,7 +260,6 @@
                     <td>{{ $index + 1 }}</td>
                     <td>{{ date('H:i', strtotime($row->created_at)) }} WIB</td>
                     <td><strong>{{ $row->nama_pelanggan }}</strong></td>
-                    <td>{{ $row->nomor_telepon ?? '-' }}</td>
                     <td><span style="color: #10b981; font-weight: 600;">Rp {{ number_format($row->nominal, 0, ',', '.') }}</span></td>
                     <td>
                         <div class="action-btns">
@@ -302,10 +300,6 @@
                     <input type="text" name="nama_pelanggan" id="inputNama" placeholder="Nama pengunjung harian..." required>
                 </div>
 
-                <div class="form-group">
-                    <label>No. Telepon (Opsional):</label>
-                    <input type="text" name="nomor_telepon" id="inputTelepon" placeholder="Contoh: 0895xxx">
-                </div>
 
                 <div class="form-group">
                     <label>Nominal Bayar (Rp):</label>
@@ -328,7 +322,6 @@
     const btnSubmit = document.getElementById('btnSubmitForm');
 
     const inputNama = document.getElementById('inputNama');
-    const inputTelepon = document.getElementById('inputTelepon');
     const inputNominal = document.getElementById('inputNominal');
 
     function bukaModalTambah() {
@@ -337,7 +330,6 @@
         methodField.innerHTML = "";
         
         inputNama.value = "";
-        inputTelepon.value = "";
         inputNominal.value = "8000"; // Default tarif Virgo Gym
         btnSubmit.innerText = "INPUT KUNJUNGAN";
         
@@ -350,7 +342,6 @@
         methodField.innerHTML = `@method('PUT')`;
         
         inputNama.value = data.nama_pelanggan;
-        inputTelepon.value = data.nomor_telepon;
         inputNominal.value = data.nominal;
         btnSubmit.innerText = "PERBARUI DATA";
         

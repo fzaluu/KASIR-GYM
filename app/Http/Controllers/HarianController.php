@@ -55,7 +55,6 @@ class HarianController extends Controller
         // Simpan data langsung ke dalam tabel transaksis
         Transaksi::create([
             'nama_pelanggan' => $request->nama_pelanggan,
-            'nomor_telepon'  => $request->nomor_telepon,
             'tipe_transaksi' => 'Harian',
             'nominal'        => $request->nominal,
         ]);
@@ -79,7 +78,6 @@ class HarianController extends Controller
         $transaksi = Transaksi::findOrFail($id);
         $transaksi->update([
             'nama_pelanggan' => $request->nama_pelanggan,
-            'nomor_telepon'  => $request->nomor_telepon,
             'nominal'        => $request->nominal,
         ]);
 
