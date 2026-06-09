@@ -18,8 +18,11 @@ class PelatihController extends Controller
             return $query->where('nama_pelatih', 'like', '%'.$cari.'%');
         })->get();
 
-        // Ambil semua data pengguna pelatih untuk tabel kedua
-        $daftarPengguna = PenggunaPelatih::with('pelatih')->get();
+        // Solusi Revisi Poin 5: Ambil data pengguna pelatih dengan fitur pencarian nama pelanggan PT
+        $daftarPengguna = PenggunaPelatih::with('pelatih')
+            ->when($cari, function($query) use ($cari) {
+                return $query->where('nama_pengguna', 'like', '%'.$cari.'%');
+            })->get();
 
         return view('pelatih', [
             'daftarPelatih' => $daftarPelatih,
@@ -55,6 +58,11 @@ class PelatihController extends Controller
         $pelatih = Pelatih::findOrFail($id);
         $pelatih->update($request->all());
 
+        // Solusi Poin 4: Otomatis sinkronkan nama pelatih terbaru di tabel transaksi kas masuk hari ini jika ada edit nama master
+        Transaksi::where('pelatih_id', $pelatih->id)->update([
+            'nama_pelanggan' => $request->nama_pelatih // Menjaga konsistensi data riwayat
+        ]);
+
         return redirect()->route('pelatih.index')->with('sukses', 'Data profil pelatih berhasil diperbarui.');
     }
 
@@ -67,31 +75,30 @@ class PelatihController extends Controller
     // --- FUNGSI KHUSUS UNTUK MENANGANI DATA SEWA PENGGUNA ---
     
     public function storePengguna(Request $request)
-{
-    $request->validate([
-        'nama_pengguna'           => 'required|string|max:255',
-        'nomor_telepon_pengguna'  => 'required|string|max:20',
-        'pelatih_id'              => 'required|exists:pelatih,id',
-        'tipe_jasa'               => 'required|in:perbulan,perhari',
-        'tarif_jasa'              => 'required|numeric',
-    ]);
+    {
+        $request->validate([
+            'nama_pengguna'           => 'required|string|max:255',
+            'nomor_telepon_pengguna'  => 'required|string|max:20',
+            'pelatih_id'              => 'required|exists:pelatih,id',
+            'tipe_jasa'               => 'required|in:perbulan,perhari',
+            'tarif_jasa'              => 'required|numeric',
+        ]);
 
-    // 1. Simpan ke tabel pengguna pelatih
-    $pengguna = PenggunaPelatih::create($request->all());
+        // 1. Simpan ke tabel pengguna pelatih
+        $pengguna = PenggunaPelatih::create($request->all());
 
-    // 🛠️ TENTUKAN TIPE TRANSAKSI SECARA SPESIFIK UNTUK PT
-    $tipeTransaksiPT = $request->tipe_jasa == 'perbulan' ? 'SEWA PELATIH' : 'SEWA PELATIH';
+        // 2. MASUK KE CATATAN TRANSAKSI DENGAN STRUKTUR BAKU (Solusi Poin 6, 8, 9 & 11)
+        Transaksi::create([
+            'pelatih_id'     => $request->pelatih_id, // Menyimpan ID Relasi Logis Pelatih
+            'nama_pelanggan' => $request->nama_pengguna,
+            'nomor_telepon'  => $request->nomor_telepon_pengguna,
+            'tipe_transaksi' => 'Sewa_pt', // Disamakan total dengan dashboard utama
+            'nominal'        => $request->tarif_jasa,
+        ]);
 
-    // 2. MASUK KE CATATAN TRANSAKSI DENGAN TIPE YANG BENAR
-    Transaksi::create([
-        'nama_pelanggan' => $request->nama_pengguna,
-        'nomor_telepon'  => $request->nomor_telepon_pengguna,
-        'tipe_transaksi' => $tipeTransaksiPT, // Hasilnya: 'Sewa PT Perbulan' atau 'Sewa PT Perhari'
-        'nominal'        => $request->tarif_jasa,
-    ]);
+        return redirect()->route('pelatih.index')->with('sukses', 'Penyewaan jasa pelatih baru berhasil dicatat dan masuk laporan keuangan.');
+    }
 
-    return redirect()->route('pelatih.index')->with('sukses', 'Penyewaan jasa pelatih baru berhasil dicatat dan masuk laporan keuangan.');
-}
     public function destroyPengguna(string $id)
     {
         PenggunaPelatih::destroy($id);

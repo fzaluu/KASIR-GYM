@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Manajemen Pelatih & Pengguna - Virgo Gym')
-@section('page_title', 'Manajemen Pelatih & Pengguna Jasa')
+@section('page_title', 'Manajemen Pelatih & Pengguna Jasa (PT)')
 
 @push('styles')
 <style>
@@ -16,10 +16,6 @@
     .btn-tambah-user { background-color: #10b981; color: #fff; border: none; padding: 10px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 600; }
     .btn-tambah-user:hover { background-color: #059669; }
     
-    .filter-box form { display: flex; gap: 8px; }
-    .input-filter { padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; width: 220px; }
-    .btn-filter { background-color: #475569; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; }
-
     .table-container { background-color: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; margin-bottom: 20px; }
     table { width: 100%; border-collapse: collapse; text-align: left; }
     th, td { padding: 12px 14px; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
@@ -29,7 +25,6 @@
     .badge { padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
     .badge-hadir { background-color: #d1fae5; color: #065f46; }
     .badge-absen { background-color: #fee2e2; color: #991b1b; }
-    .badge-aktif { background-color: #e0f2fe; color: #0369a1; }
     .badge-waktu { background-color: #f1f5f9; color: #475569; font-weight: normal; }
 
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.6); display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: all 0.25s ease; z-index: 999; }
@@ -54,11 +49,8 @@
         </div>
     @endif
 
-    
-
-    <!-- ================= TABEL 1: DATA MASTER PELATIH ================= -->
     <div class="section-block">
-        <span class="section-title">🏋️ Daftar Pelatih & Absensi Hari Ini</span>
+        <span class="section-title">🏋️ Daftar Master Pelatih & Absensi</span>
         <button class="btn-tambah" onclick="bukaModalPelatih()">[+] TAMBAH DATA PELATIH</button>
     </div>
     
@@ -69,8 +61,7 @@
                     <th>No</th>
                     <th>Nama Pelatih</th>
                     <th>No. HP / WA</th>
-                    <th>Tarif Bulanan</th>
-                    <th>Tarif Harian</th>
+                    <th>Tarif Per Sesi/Hari</th>
                     <th>Status Hadir</th>
                     <th>Aksi</th>
                 </tr>
@@ -81,8 +72,7 @@
                     <td>{{ $index + 1 }}</td>
                     <td><strong>{{ $row->nama_pelatih }}</strong></td>
                     <td>{{ $row->nomor_telepon }}</td>
-                    <td>Rp {{ number_format($row->tarif_bulanan, 0, ',', '.') }}</td>
-                    <td>Rp {{ number_format($row->tarif_harian, 0, ',', '.') }}</td>
+                    <td><span style="font-weight: 600; color: #0284c7;">Rp {{ number_format($row->tarif_harian, 0, ',', '.') }}</span></td>
                     <td>
                         <span class="badge {{ $row->status_hadir == 'hadir' ? 'badge-hadir' : 'badge-absen' }}">
                             {{ $row->status_hadir == 'hadir' ? 'Hadir / Melatih' : 'Tidak Hadir' }}
@@ -97,15 +87,14 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="7" style="text-align: center; color: #94a3b8;">Belum ada data pelatih.</td></tr>
+                <tr><td colspan="6" style="text-align: center; color: #94a3b8;">Belum ada data pelatih.</td></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 
-    <!-- ================= TABEL 2: DATA PENGGUNA JASA PELATIH ================= -->
     <div class="section-block">
-        <span class="section-title">👥 Member yang Menggunakan Jasa Pelatih</span>
+        <span class="section-title">👥 Catatan Member Sewa Jasa Pelatih (PT)</span>
         <button class="btn-tambah-user" onclick="bukaModalPengguna()">[+] DAFTARKAN SEWA PELATIH</button>
     </div>
 
@@ -116,10 +105,9 @@
                     <th>No</th>
                     <th>Nama Member</th>
                     <th>No. HP Member</th>
-                    <th>Nama Pelatih</th>
-                    <th>Tipe Jasa</th>
-                    <th>Tarif Terkunci</th>
-                    <th>Status / Masa Aktif</th>
+                    <th>Nama Pelatih (PT)</th>
+                    <th>Biaya Sewa</th>
+                    <th>Tanggal & Waktu Input</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
@@ -130,31 +118,8 @@
                     <td><strong>{{ $user->nama_pengguna }}</strong></td>
                     <td>{{ $user->nomor_telepon_pengguna }}</td>
                     <td>{{ $user->pelatih->nama_pelatih ?? 'Pelatih Dihapus' }}</td>
-                    <td><span style="text-transform: capitalize; font-weight: 600; color: #4f46e5;">{{ $user->tipe_jasa == 'perbulan' ? 'Bulanan' : 'Harian' }}</span></td>
                     <td><span style="font-weight: 600; color: #10b981;">Rp {{ number_format($user->tarif_jasa, 0, ',', '.') }}</span></td>
-                    
-                    <!-- 🛠️ PERBAIKAN SISA HARI & TANGGAL WAKTU -->
-                    <td>
-                        @if($user->tipe_jasa == 'perbulan')
-                            @php
-                                $tanggalDaftar = \Carbon\Carbon::parse($user->created_at);
-                                $tanggalSelesai = $tanggalDaftar->copy()->addDays(30);
-                                
-                                // Menggunakan diffInDays dengan parameter false agar menghasilkan angka bulat
-                                // Dan kita pastikan waktunya dihitung dari awal hari (startOfDay) supaya tidak pecah desimal
-                                $sisaHari = now()->startOfDay()->diffInDays($tanggalSelesai->startOfDay(), false);
-                            @endphp
-                            
-                            @if($sisaHari > 0)
-                                <span class="badge badge-aktif">Sisa {{ $sisaHari }} Hari</span>
-                            @else
-                                <span class="badge badge-absen">Habis Kontrak</span>
-                            @endif
-                        @else
-                            <span class="badge badge-waktu">{{ $user->created_at->format('d/m/Y H:i') }} WIB</span>
-                        @endif
-                    </td>
-                    
+                    <td><span class="badge badge-waktu">{{ $user->created_at->format('d/m/Y H:i') }} WIB</span></td>
                     <td>
                         <form action="{{ route('pelatih.destroyPengguna', $user->id) }}" method="POST" onsubmit="return confirm('Hapus riwayat sewa member ini?')">
                             @csrf @method('DELETE')
@@ -163,14 +128,12 @@
                     </td>
                 </tr>
                 @empty
-                <tr><td colspan="8" style="text-align: center; color: #94a3b8;">Belum ada member yang menyewa pelatih hari ini.</td></tr>
+                <tr><td colspan="7" style="text-align: center; color: #94a3b8;">Belum ada member yang menyewa pelatih hari ini.</td></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 
-    <!-- (Bagian Modal HTML 1 & 2 serta Script JS tetap dipertahankan sama seperti kode sebelumnya) -->
-    <!-- ================= MODAL 1: FORM MASTER PELATIH ================= -->
     <div class="modal-overlay" id="modalPelatih">
         <div class="modal-box">
             <div class="modal-header">
@@ -179,20 +142,19 @@
             </div>
             <form id="formPelatih" action="" method="POST">
                 @csrf <div id="methodFieldPelatih"></div>
+                
+                <input type="hidden" name="tarif_bulanan" id="tarif_bulanan" value="0">
+
                 <div class="form-group">
                     <label>Nama Lengkap Pelatih:</label>
-                    <input type="text" name="nama_pelatih" id="nama_pelatih" required>
+                    <input type="text" name="nama_pelatih" id="nama_pelatih" required placeholder="Masukkan nama trainer...">
                 </div>
                 <div class="form-group">
                     <label>No. HP / WhatsApp:</label>
-                    <input type="text" name="nomor_telepon" id="nomor_telepon" required>
+                    <input type="text" name="nomor_telepon" id="nomor_telepon" required placeholder="08xxxxxxxx">
                 </div>
                 <div class="form-group">
-                    <label>Tarif Bulanan (Rp):</label>
-                    <input type="number" name="tarif_bulanan" id="tarif_bulanan" value="200000" required>
-                </div>
-                <div class="form-group">
-                    <label>Tarif Harian (Rp):</label>
+                    <label>Tarif Per Sesi/Hari (Rp):</label>
                     <input type="number" name="tarif_harian" id="tarif_harian" value="20000" required>
                 </div>
                 <div class="form-group">
@@ -207,15 +169,17 @@
         </div>
     </div>
 
-    <!-- ================= MODAL 2: FORM PENGGUNA JASA PELATIH ================= -->
     <div class="modal-overlay" id="modalPengguna">
         <div class="modal-box">
             <div class="modal-header">
-                <h2>Daftarkan Sewa Pelatih</h2>
+                <h2>Daftarkan Sewa Pelatih (Harian)</h2>
                 <button class="btn-close" onclick="tutupModal('modalPengguna')">&times;</button>
             </div>
             <form action="{{ route('pelatih.storePengguna') }}" method="POST">
                 @csrf
+                
+                <input type="hidden" name="tipe_jasa" value="perhari">
+
                 <div class="form-group">
                     <label>Nama Member (Pengguna):</label>
                     <input type="text" name="nama_pengguna" required placeholder="Nama member...">
@@ -230,20 +194,13 @@
                         <option value="">-- Pilih Pelatih --</option>
                         @foreach($daftarPelatih as $p)
                             @if($p->status_hadir == 'hadir')
-                                <option value="{{ $p->id }}" data-bulanan="{{ $p->tarif_bulanan }}" data-harian="{{ $p->tarif_harian }}">{{ $p->nama_pelatih }}</option>
+                                <option value="{{ $p->id }}" data-harian="{{ $p->tarif_harian }}">{{ $p->nama_pelatih }}</option>
                             @endif
                         @endforeach
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Tipe Jasa Pelatih:</label>
-                    <select name="tipe_jasa" id="selectTipe" onchange="hitungTarifOtomatis()" required>
-                        <option value="perbulan">Bulanan</option>
-                        <option value="perhari">Harian</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Tarif Jasa (Terkunci Otomatis):</label>
+                    <label>Tarif Jasa Per Sesi (Terkunci Otomatis):</label>
                     <input type="number" name="tarif_jasa" id="tarifTerkunci" readonly required>
                 </div>
                 <button type="submit" style="width:100%; padding:12px; border-radius:8px; border:none; background-color:#10b981; color:white; font-weight:600; cursor:pointer;">PROSES SEWA</button>
@@ -261,7 +218,7 @@
         document.getElementById('methodFieldPelatih').innerHTML = "";
         document.getElementById('nama_pelatih').value = "";
         document.getElementById('nomor_telepon').value = "";
-        document.getElementById('tarif_bulanan').value = 200000;
+        document.getElementById('tarif_bulanan').value = 0;
         document.getElementById('tarif_harian').value = 20000;
         document.getElementById('status_hadir').value = "hadir";
         document.getElementById('btnSubmitPelatih').innerText = "SIMPAN DATA";
@@ -274,7 +231,7 @@
         document.getElementById('methodFieldPelatih').innerHTML = `@method('PUT')`;
         document.getElementById('nama_pelatih').value = data.nama_pelatih;
         document.getElementById('nomor_telepon').value = data.nomor_telepon;
-        document.getElementById('tarif_bulanan').value = data.tarif_bulanan;
+        document.getElementById('tarif_bulanan').value = 0;
         document.getElementById('tarif_harian').value = data.tarif_harian;
         document.getElementById('status_hadir').value = data.status_hadir;
         document.getElementById('btnSubmitPelatih').innerText = "PERBARUI DATA";
@@ -286,17 +243,13 @@
 
     function hitungTarifOtomatis() {
         const selectPelatih = document.getElementById('selectPelatih');
-        const selectTipe = document.getElementById('selectTipe').value;
         const inputTarif = document.getElementById('tarifTerkunci');
         const pilihanTerpilih = selectPelatih.options[selectPelatih.selectedIndex];
         
         if (!pilihanTerpilih.value) { inputTarif.value = ""; return; }
 
-        const hargaBulanan = pilihanTerpilih.getAttribute('data-bulanan');
         const hargaHarian = pilihanTerpilih.getAttribute('data-harian');
-
-        if (selectTipe === 'perbulan') { inputTarif.value = hargaBulanan; } 
-        else if (selectTipe === 'perhari') { inputTarif.value = hargaHarian; }
+        inputTarif.value = hargaHarian;
     }
 </script>
 @endpush

@@ -5,7 +5,6 @@
 
 @push('styles')
 <style>
-    /* PERBAIKAN GRID: Diubah menjadi repeat(3, 1fr) agar muat 3 card sejajar secara horizontal */
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -35,7 +34,6 @@
         color: #0f172a;
     }
 
-    /* Area Tombol Aksi */
     .action-area {
         display: flex;
         justify-content: flex-start;
@@ -59,7 +57,6 @@
         background-color: #0ea5e9;
     }
 
-    /* Desain Tabel Manual */
     .table-container {
         background-color: #fff;
         padding: 24px;
@@ -96,7 +93,6 @@
         background-color: #f8fafc;
     }
 
-    /* CSS MODAL MANUAL */
     .modal-overlay {
         position: fixed;
         top: 0;
@@ -155,10 +151,6 @@
         line-height: 1;
     }
 
-    .btn-close:hover {
-        color: #64748b;
-    }
-
     .form-group {
         margin-bottom: 18px;
     }
@@ -180,11 +172,6 @@
         outline: none;
         background-color: #fff;
         box-sizing: border-box;
-    }
-
-    .form-control:focus {
-        border-color: #38bdf8;
-        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
     }
 
     .radio-grid {
@@ -216,40 +203,10 @@
         font-size: 15px;
     }
 
-    .btn-simpan:hover {
-        background-color: #059669;
-    }
-
-    @media screen and (max-width: 1024px) {
-        .stats-grid {
-            grid-template-columns: repeat(2, 1fr);
-        }
-    }
-
     @media screen and (max-width: 768px) {
-        .stats-grid {
-            grid-template-columns: 1fr;
-            gap: 12px;
-        }
-
-        .card { padding: 16px; }
-        .card p { font-size: 22px; }
-
-        .btn-aksi {
-            width: 100%;
-            text-align: center;
-            padding: 12px;
-            font-size: 14px;
-        }
-
-        .table-container {
-            padding: 15px;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
+        .stats-grid { grid-template-columns: 1fr; gap: 12px; }
+        .table-container { padding: 15px; overflow-x: auto; }
         table { min-width: 550px; }
-        th, td { padding: 10px 12px; font-size: 13px; }
         .modal-box { width: 90%; padding: 20px; }
         .radio-grid { grid-template-columns: 1fr; }
     }
@@ -294,8 +251,8 @@
             <thead>
                 <tr>
                     <th>Jam</th>
-                    <th>Jenis Kunjungan</th>
-                    <th>Keterangan</th>
+                    <th>Nama Pelanggan</th>
+                    <th>Tipe Transaksi</th>
                     <th>Nominal</th>
                 </tr>
             </thead>
@@ -303,6 +260,7 @@
                 @foreach($logaktivitas as $item)
                 <tr>
                     <td>{{ $item->created_at->format('H:i') }} WIB</td>
+                    {{-- Solusi Revisi Poin 4: Membaca nama ter-update dari relasi member/pelatih logis --}}
                     <td><strong>{{ $item->nama_pelanggan }}</strong></td>
                     <td>
                         @if($item->tipe_transaksi == 'Harian')
@@ -310,11 +268,11 @@
                         @elseif($item->tipe_transaksi == 'Checkin')
                             Check-in Member Lama    
                         @elseif($item->tipe_transaksi == 'Perpanjang')
-                            Perpanjang Masa Aktif Member    
+                            Perpanjang Member    
                         @elseif($item->tipe_transaksi == 'Baru')
-                            Pendaftaran Member Baru
+                            Member Baru (Registrasi)
                         @elseif($item->tipe_transaksi == 'Sewa PT')
-                            Sewa Jasa PT ({{ $item->pelatih->nama_pelatih ?? 'Pelatih' }})
+                            Sewa Jasa PT
                         @else
                             {{ $item->tipe_transaksi }}
                         @endif
@@ -339,48 +297,30 @@
                 <button class="btn-close" id="btnTutupModal">&times;</button>
             </div>
             
-            <form action="{{ route('transaksi.store') }}" method="POST">
+           <form action="{{ route('transaksi.store') }}" method="POST">
                 @csrf
-                
                 <div class="form-group">
                     <label>Pilihan Aksi:</label>
                     <div class="radio-grid">
-                        <label><input type="radio" name="tipe_kunjungan" value="harian" checked> Harian / Non-Member</label>
-                        <label><input type="radio" name="tipe_kunjungan" value="checkin"> Check-in Member</label>
-                        <label><input type="radio" name="tipe_kunjungan" value="baru"> Member Baru</label>
-                        <label><input type="radio" name="tipe_kunjungan" value="perpanjang"> Perpanjang Member</label>
-                        <label><input type="radio" name="tipe_kunjungan" value="sewa_pt"> Sewa Jasa Pelatih (PT)</label>
+                        <label><input type="radio" name="tipe_kunjungan" value="harian" checked> Kunjungan Harian</label>
+                        <label><input type="radio" name="tipe_kunjungan" value="checkin"> Check-in Member Tetap</label>
+                        <label><input type="radio" name="tipe_kunjungan" value="perpanjang"> Perpanjang Member Gym</label>
                     </div>
                 </div>
 
                 <div class="form-group" id="inputNama">
-                    <label>Nama Pelanggan / Member:</label>
-                    <input type="text" name="nama" class="form-control" placeholder="Masukkan nama...">
+                    <label>Nama Pengunjung Harian:</label>
+                    <input type="text" name="nama" class="form-control" placeholder="Masukkan nama pengunjung harian...">
                 </div>
 
                 <div class="form-group" id="selectMember" style="display: none;">
-                    <label>Pilih Member Terdaftar:</label>
+                    <label>Pilih Nama Member:</label>
                     <select name="member_id" class="form-control">
-                        <option value="">-- Cari & Pilih Nama Member --</option>
+                        <option value="">-- Pilih Member --</option>
                         @foreach($daftarMember as $member)
                             <option value="{{ $member->id }}">{{ $member->nama_member }} ({{ $member->nomor_telepon }})</option>
                         @endforeach
                     </select>
-                </div>
-
-                <div class="form-group" id="selectPelatih" style="display: none;">
-                    <label>Pilih Pelatih Gym Yang Bertugas:</label>
-                    <select name="pelatih_id" class="form-control">
-                        <option value="">-- Pilih Nama Pelatih --</option>
-                        @foreach($daftarPelatih as $pelatih)
-                            <option value="{{ $pelatih->id }}">{{ $pelatih->nama_pelatih }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="form-group" id="inputTelepon" style="display: none;">
-                    <label>No. Telepon Member:</label>
-                    <input type="text" name="nomor_telepon" class="form-control" placeholder="Masukkan nomor telepon...">
                 </div>
 
                 <div class="form-group" id="inputNominal">
@@ -388,13 +328,14 @@
                     <input type="number" name="nominal" id="nominalInput" value="8000" class="form-control" required>
                 </div>
 
-                <button type="submit" class="btn-simpan">SIMPAN TRANSAKSI</button>
+                <button type="submit" class="btn-simpan">SIMPAN TRANSAKSI KASIR</button>
             </form>
         </div>
     </div>
 @endsection
 
 @push('scripts')
+
 <script>
     const modal = document.getElementById('modalTransaksi');
     const btnBuka = document.getElementById('btnBukaModal');
@@ -403,53 +344,29 @@
     const radioTipe = document.querySelectorAll('input[name="tipe_kunjungan"]');
     const inputNama = document.getElementById('inputNama');
     const selectMember = document.getElementById('selectMember');
-    const selectPelatih = document.getElementById('selectPelatih');
-    const inputTelepon = document.getElementById('inputTelepon');
     const inputNominal = document.getElementById('inputNominal');
     const fieldNominal = document.getElementById('nominalInput');
 
-    // Menangani Buka Tutup Modal Box Manual
     btnBuka.addEventListener('click', () => modal.classList.add('show'));
     btnTutup.addEventListener('click', () => modal.classList.remove('show'));
 
-    // JavaScript Pintar Mengatur Tampilan Input Sesuai Pilihan Radio Button
     radioTipe.forEach(radio => {
         radio.addEventListener('change', (e) => {
+            // Reset tampilan form
+            inputNama.style.display = 'none';
+            selectMember.style.display = 'none';
+            inputNominal.style.display = 'block';
+
             if (e.target.value === 'harian') {
                 inputNama.style.display = 'block';
-                selectMember.style.display = 'none';
-                selectPelatih.style.display = 'none';
-                inputTelepon.style.display = 'none';
-                inputNominal.style.display = 'block';
-                fieldNominal.value = '8000';
+                fieldNominal.value = '8000'; // Biaya harian standard
             } else if (e.target.value === 'checkin') {
-                inputNama.style.display = 'none';
-                selectMember.style.display = 'block'; // Mengubah ke dropdown pilihan member lama
-                selectPelatih.style.display = 'none';
-                inputTelepon.style.display = 'none';
-                inputNominal.style.display = 'none'; 
+                selectMember.style.display = 'block';
+                inputNominal.style.display = 'none'; // Check-in member lama gratis
                 fieldNominal.value = '0';
-            } else if (e.target.value === 'baru') {
-                inputNama.style.display = 'block';
-                selectMember.style.display = 'none';
-                selectPelatih.style.display = 'none';
-                inputTelepon.style.display = 'block'; 
-                inputNominal.style.display = 'block';
-                fieldNominal.value = '100000';
             } else if (e.target.value === 'perpanjang') {
-                inputNama.style.display = 'none';
-                selectMember.style.display = 'block'; // Mengubah ke dropdown pilihan member lama
-                selectPelatih.style.display = 'none';
-                inputTelepon.style.display = 'none'; 
-                inputNominal.style.display = 'block'; 
-                fieldNominal.value = '100000'; 
-            } else if (e.target.value === 'sewa_pt') {
-                inputNama.style.display = 'none';
-                selectMember.style.display = 'block'; // Dropdown member yang menyewa
-                selectPelatih.style.display = 'block'; // Dropdown pelatih yang disewa
-                inputTelepon.style.display = 'none';
-                inputNominal.style.display = 'block';
-                fieldNominal.value = '200000'; // Default tarif bulanan PT bawaan database
+                selectMember.style.display = 'block';
+                fieldNominal.value = '100000'; // Biaya iuran bulanan
             }
         });
     });

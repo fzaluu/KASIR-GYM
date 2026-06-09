@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Http\Controllers;
+
 use Illuminate\Http\Request;
 use App\Models\Transaksi;
 use Carbon\Carbon;
@@ -26,19 +28,20 @@ class HarianController extends Controller
         // 3. Bangun Query Utama untuk Tipe Transaksi 'Harian'
         $query = Transaksi::where('tipe_transaksi', 'Harian');
 
-        // Fitur Pencarian berdasarkan nama pelanggan
-        if ($request->has('cari') && $request->cari != '') {
+        // Solusi Revisi Poin 5: Fitur Search yang Fleksibel & Akurat
+        if ($request->filled('cari')) {
+            // Jika kasir sedang mencari nama, cari di semua rekam medis tanggal tanpa terkunci tanggal hari ini
             $query->where('nama_pelanggan', 'LIKE', '%' . $request->cari . '%');
+        } else {
+            // Jika kasir tidak sedang mencari nama, baru filter berdasarkan tanggal kalender terpilih
+            $query->whereDate('created_at', $tanggalTerpilih);
         }
-
-        // Fitur Filter Kalender Tanggal
-        $query->whereDate('created_at', $tanggalTerpilih);
 
         // Ambil data pengunjung harian diurutkan dari yang paling baru masuk
         $daftarHarian = $query->orderBy('created_at', 'desc')->get();
 
         // 4. Lempar data ke halaman blade view harian
-        return view('harian', compact('daftarHarian', 'totalHariIni', 'totalKemarin'));
+        return view('harian', compact('daftarHarian', 'totalHariIni', 'totalKemarin', 'tanggalTerpilih'));
     }
 
     /**
@@ -52,15 +55,14 @@ class HarianController extends Controller
             'nominal'        => 'required|numeric',
         ]);
 
-        // Simpan data langsung ke dalam tabel transaksis
+        // Simpan data langsung ke dalam tabel transaksi dengan bahasa baku
         Transaksi::create([
             'nama_pelanggan' => $request->nama_pelanggan,
             'tipe_transaksi' => 'Harian',
             'nominal'        => $request->nominal,
         ]);
 
-        // Redirect kembali ke halaman index resource dengan membawa flash message sukses
-        return redirect()->route('harian.index')->with('sukses', 'Pengunjung harian berhasil dicatat, jirr!');
+        return redirect()->route('harian.index')->with('sukses', 'Data pengunjung harian berhasil dicatat.');
     }
 
     /**
@@ -81,7 +83,7 @@ class HarianController extends Controller
             'nominal'        => $request->nominal,
         ]);
 
-        return redirect()->route('harian.index')->with('sukses', 'Data pengunjung harian berhasil diperbarui!');
+        return redirect()->route('harian.index')->with('sukses', 'Data pengunjung harian berhasil diperbarui.');
     }
 
     /**
@@ -93,6 +95,6 @@ class HarianController extends Controller
         $transaksi = Transaksi::findOrFail($id);
         $transaksi->delete();
 
-        return redirect()->route('harian.index')->with('sukses', 'Data kunjungan harian berhasil dihapus!');
+        return redirect()->route('harian.index')->with('sukses', 'Data kunjungan harian berhasil dihapus.');
     }
 }

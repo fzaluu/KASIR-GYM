@@ -16,8 +16,10 @@ class MemberController extends Controller
     {
         $query = Member::query();
 
-        if ($request->has('cari') && $request->cari != '') {
-            $query->where('nama_member', 'LIKE', '%' . $request->cari . '%');
+        // Solusi Revisi Poin 5: Fitur Search Member yang presisi
+        if ($request->filled('cari')) {
+            $query->where('nama_member', 'LIKE', '%' . $request->cari . '%')
+                  ->orWhere('nomor_telepon', 'LIKE', '%' . $request->cari . '%');
         }
 
         $daftarMember = $query->orderBy('nama_member', 'asc')->get();
@@ -63,10 +65,12 @@ class MemberController extends Controller
                 'tanggal_kadaluarsa' => Carbon::today()->addDays(30)
             ]);
 
+            // Solusi Sinkronisasi Nama Tipe Transaksi (Poin 8 & 9) + Menyimpan member_id
             Transaksi::create([
+                'member_id'      => $memberLama->id,
                 'nama_pelanggan' => $memberLama->nama_member,
                 'nomor_telepon'  => $memberLama->nomor_telepon,
-                'tipe_transaksi' => 'Perpanjang Member',
+                'tipe_transaksi' => 'Perpanjang', // Disamakan dengan dashboard
                 'nominal'        => $request->nominal,
             ]);
 
@@ -74,17 +78,19 @@ class MemberController extends Controller
         }
 
         // ✨ KASUS 3: Jika benar-benar member baru murni (belum ada di DB)
-        Member::create([
+        $memberBaru = Member::create([
             'nama_member'        => $request->nama_member,
             'nomor_telepon'      => $request->nomor_telepon,
             'tanggal_kadaluarsa' => Carbon::today()->addDays(30),
             'total_checkin'      => 0,
         ]);
 
+        // Solusi Sinkronisasi Nama Tipe Transaksi (Poin 8 & 9) + Menyimpan member_id
         Transaksi::create([
-            'nama_pelanggan' => $request->nama_member,
-            'nomor_telepon'  => $request->nomor_telepon,
-            'tipe_transaksi' => 'Pendaftaran Member',
+            'member_id'      => $memberBaru->id,
+            'nama_pelanggan' => $memberBaru->nama_member,
+            'nomor_telepon'  => $memberBaru->nomor_telepon,
+            'tipe_transaksi' => 'Baru', // Disamakan dengan dashboard
             'nominal'        => $request->nominal,
         ]);
 
@@ -107,6 +113,11 @@ class MemberController extends Controller
             'nama_member'        => $request->nama_member,
             'nomor_telepon'      => $request->nomor_telepon,
             'tanggal_kadaluarsa' => $request->tanggal_kadaluarsa,
+        ]);
+
+        // Solusi Poin 4: Otomatis sinkronkan nama terbaru di log aktivitas/transaksi kas masuk hari ini jika ada edit nama
+        Transaksi::where('member_id', $member->id)->update([
+            'nama_pelanggan' => $request->nama_member
         ]);
 
         return redirect()->route('member.index')->with('sukses', 'Data profil member berhasil diperbarui!');
@@ -134,24 +145,24 @@ class MemberController extends Controller
             return redirect()->route('member.index')->with('eror', 'Gagal Check-In! Masa aktif member ini sudah habis.');
         }
 
-        // 🛠️ LANGKAH 2: Validasi Pembatasan Check-In Maksimal 1x Sehari
-        // Sistem memeriksa apakah hari ini sudah ada log transaksi check-in untuk nama member ini
-        $sudahCheckinHariIni = Transaksi::where('nama_pelanggan', $member->nama_member)
-                                         ->where('tipe_transaksi', 'Check-In Member')
+        // 🛠️ Solusi Revisi Poin 2: Dikunci pakai member_id agar anti-jebol saat nama di-edit
+        $sudahCheckinHariIni = Transaksi::where('member_id', $member->id)
+                                         ->where('tipe_transaksi', 'Checkin')
                                          ->whereDate('created_at', Carbon::today())
                                          ->exists();
 
         if ($sudahCheckinHariIni) {
-            return redirect()->route('member.index')->with('eror', 'Gagal! Member bernama "' . $member->nama_member . '" sudah melakukan check-in hari ini. Tidak boleh duplikat!');
+            return redirect()->route('member.index')->with('eror', 'Gagal! Member bernama "' . $member->nama_member . '" sudah melakukan check-in hari ini.');
         }
 
         // Jika belum ada check-in hari ini, maka proses dilanjutkan
         $member->increment('total_checkin'); 
 
         Transaksi::create([
+            'member_id'      => $member->id,
             'nama_pelanggan' => $member->nama_member,
             'nomor_telepon'  => $member->nomor_telepon,
-            'tipe_transaksi' => 'Check-In Member',
+            'tipe_transaksi' => 'Checkin', // Disamakan dengan dashboard
             'nominal'        => 0,
         ]);
 
@@ -183,9 +194,10 @@ class MemberController extends Controller
 
         // 2. Catat iuran bulanan tersebut ke riwayat transaksi kas keuangan
         Transaksi::create([
+            'member_id'      => $member->id,
             'nama_pelanggan' => $member->nama_member,
             'nomor_telepon'  => $member->nomor_telepon,
-            'tipe_transaksi' => 'Perpanjang Member',
+            'tipe_transaksi' => 'Perpanjang', // Disamakan dengan dashboard
             'nominal'        => $request->nominal,
         ]);
 

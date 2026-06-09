@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Transaksi;
 use App\Models\Member;
+use App\Models\PenggunaPelatih;
 use App\Models\Pelatih;
-use App\Models\AbsensiMember;
 use Carbon\Carbon;
 
 class TransaksiController extends Controller
@@ -15,155 +15,94 @@ class TransaksiController extends Controller
     {
         $query = Transaksi::query();
 
-        // Fitur Filter Hari / Tanggal
+        // Mengisi tanggal otomatis bawaan hari ini jika filter tanggal dan tipe kosong
+        if (!$request->filled('tanggal') && !$request->filled('tipe_transaksi')) {
+            $request->merge([
+                'tanggal' => Carbon::today()->toDateString()
+            ]);
+        }
+
+        // Filter Pencarian Tanggal (Filter Bulan Dihapus total sesuai request)
         if ($request->filled('tanggal')) {
             $query->whereDate('created_at', $request->tanggal);
         }
 
-        // Fitur Filter Bulan dan Tahun
-        if ($request->filled('bulan')) {
-            $tahunBulan = explode('-', $request->bulan);
-            $query->whereYear('created_at', $tahunBulan[0])
-                  ->whereMonth('created_at', $tahunBulan[1]);
-        }
-
-        // Fitur Filter Kategori Tipe Transaksi
+        // Filter Pencarian Tipe Transaksi Baku (Harian, Baru, Checkin, Perpanjang, Sewa_pt)
         if ($request->filled('tipe_transaksi')) {
             $query->where('tipe_transaksi', $request->tipe_transaksi);
         }
 
-        // Mengambil data transaksi terbaru
-        $semuaTransaksi = $query->latest()->get();
+        $semuaTransaksi = $query->orderBy('created_at', 'desc')->get();
 
-        // Mengambil data master member untuk pilihan di dropdown form
-        $daftarMember = Member::orderBy('nama_member', 'asc')->get();
-
-        // Mengambil data master pelatih yang statusnya hadir untuk pilihan dropdown sewa PT
-        $daftarPelatih = Pelatih::where('status_hadir', 'hadir')->orderBy('nama_pelatih', 'asc')->get();
-
-        // Mengirimkan semua data ke file view transaksi.blade.php
-        return view('transaksi', compact('semuaTransaksi', 'daftarMember', 'daftarPelatih'));
+        return view('transaksi', compact('semuaTransaksi'));
     }
 
     public function store(Request $request)
     {
-        // Validasi inputan form kasir
-        $request->validate([
-            'tipe_kunjungan' => 'required',
-            'nominal'        => 'required|numeric',
-            'nama'           => 'required_if:tipe_kunjungan,harian,baru|nullable|string|max:100',
-            'member_id'      => 'required_if:tipe_kunjungan,checkin,perpanjang,sewa_pt|nullable|integer',
-            'pelatih_id'     => 'required_if:tipe_kunjungan,sewa_pt|nullable|integer',
+        $tipe = $request->tipe_kunjungan;
+        $namaPelanggan = '';
+        $memberId = null;
+        $pelatihId = null;
+        $tipeTransaksiBaku = ''; 
+
+        // Validasi Alur Inputan Dashboard Terpilih (Murni Harian, Check-In, Perpanjang)
+        if ($tipe === 'harian') {
+            $namaPelanggan = $request->nama;
+            $tipeTransaksiBaku = 'Harian';
+        } elseif ($tipe === 'checkin' || $tipe === 'perpanjang') {
+            $member = Member::find($request->member_id);
+            if (!$member) {
+                return redirect()->back()->with('gagal', 'Data member wajib dipilih!');
+            }
+            $namaPelanggan = $member->nama_member;
+            $memberId = $member->id;
+
+            if ($tipe === 'checkin') {
+                $tipeTransaksiBaku = 'Checkin';
+                
+                // 🚫 Cek Validasi Expired
+                if (Carbon::parse($member->tanggal_kadaluarsa)->isPast()) {
+                    return redirect()->back()->with('gagal', 'Gagal Check-In! Masa aktif member ' . $namaPelanggan . ' sudah habis/expired. Silakan lakukan Perpanjang Member terlebih dahulu!');
+                }
+
+                // 🛠️ Solusi Anti-Cheat Double Check-in
+                $sudahCheckin = Transaksi::where('member_id', $memberId)
+                                         ->where('tipe_transaksi', 'Checkin')
+                                         ->whereDate('created_at', Carbon::today())
+                                         ->exists();
+                if ($sudahCheckin) {
+                    return redirect()->back()->with('gagal', 'Gagal! Member bernama ' . $namaPelanggan . ' sudah melakukan check-in hari ini!');
+                }
+
+                // 🔥 TRIGGER UTAMA: Tambah total gym (+1)
+                $member->increment('total_checkin');
+
+            } else {
+                $tipeTransaksiBaku = 'Perpanjang';
+
+                // 🔥 TRIGGER UTAMA: Tambah masa aktif +30 hari
+                $expiredLama = Carbon::parse($member->tanggal_kadaluarsa);
+                if ($expiredLama->isPast()) {
+                    $expiredBaru = Carbon::today()->addDays(30);
+                } else {
+                    $expiredBaru = $expiredLama->addDays(30);
+                }
+
+                $member->update([
+                    'tanggal_kadaluarsa' => $expiredBaru
+                ]);
+            }
+        }
+
+        // Simpan Transaksi Keuangan Resmi Kasir Keuangan Dashboard
+        Transaksi::create([
+            'tipe_transaksi' => $tipeTransaksiBaku, 
+            'member_id'      => $memberId,
+            'pelatih_id'     => $pelatihId,
+            'nama_pelanggan' => $namaPelanggan,
+            'nominal'        => $request->nominal ?? 0,
         ]);
 
-        $hariIni = Carbon::today();
-        $transaksi = new Transaksi();
-
-        // 1. PROSES JIKA KUNJUNGAN HARIAN (NON-MEMBER)
-        if ($request->tipe_kunjungan === 'harian') {
-            $namaClean = strip_tags(trim($request->nama));
-
-            // Proteksi double click/spam dalam waktu 10 detik
-            $doubleClick = Transaksi::where('nama_pelanggan', $namaClean)
-                                     ->where('tipe_transaksi', 'Harian')
-                                     ->where('created_at', '>=', Carbon::now()->subSeconds(10))
-                                     ->exists();
-
-            if ($doubleClick) {
-                return redirect()->back()->withInput()->with('gagal', 'Transaksi diabaikan! Terdeteksi input harian ganda dalam waktu singkat.');
-            }
-
-            $transaksi->tipe_transaksi = 'Harian';
-            $transaksi->nama_pelanggan = $namaClean;
-            $transaksi->member_id      = null;
-            $transaksi->pelatih_id     = null;
-        }
-
-        // 2. PROSES JIKA PENDAFTARAN MEMBER BARU
-        elseif ($request->tipe_kunjungan === 'baru') {
-            $namaClean = strip_tags(trim($request->nama));
-
-            // Cek apakah nama ini sudah jadi member yang masih aktif
-            $memberExist = Member::where('nama_member', $namaClean)
-                                 ->where('tanggal_kadaluarsa', '>=', $hariIni)
-                                 ->first();
-
-            if ($memberExist) {
-                return redirect()->back()->withInput()->with('gagal', 'Registrasi Gagal! "' . $namaClean . '" masih terdaftar sebagai member aktif hingga ' . date('d M Y', strtotime($memberExist->tanggal_kadaluarsa)));
-            }
-
-            // Buat data master member baru murni di database
-            $memberBaru = Member::create([
-                'nama_member'        => $namaClean,
-                'nomor_telepon'      => $request->nomor_telepon ?? '08123456789',
-                'tanggal_kadaluarsa' => Carbon::now()->addDays(30),
-            ]);
-
-            $transaksi->tipe_transaksi = 'Baru';
-            $transaksi->nama_pelanggan = $memberBaru->nama_member;
-            $transaksi->member_id      = $memberBaru->id; // Mengunci ID Relasi
-            $transaksi->pelatih_id     = null;
-        }
-
-        // 3. PROSES JIKA MEMBER MELAKUKAN CHECK-IN KEDATANGAN
-        elseif ($request->tipe_kunjungan === 'checkin') {
-            $member = Member::findOrFail($request->member_id);
-
-            // Cek apakah member sudah expired masa aktifnya
-            if (Carbon::parse($member->tanggal_kadaluarsa)->isPast()) {
-                return redirect()->back()->withInput()->with('gagal', 'Check-in Gagal! Masa aktif member "' . $member->nama_member . '" sudah HABIS.');
-            }
-
-            // Cek agar tidak bisa double absen/check-in di hari yang sama
-            $sudahAbsen = AbsensiMember::where('member_id', $member->id)
-                                        ->whereDate('created_at', $hariIni)
-                                        ->exists();
-
-            if ($sudahAbsen) {
-                return redirect()->back()->withInput()->with('gagal', 'Check-in Gagal! Member "' . $member->nama_member . '" sudah check-in hari ini.');
-            }
-
-            // Catat data ke tabel absensi pendukung
-            AbsensiMember::create([
-                'member_id' => $member->id
-            ]);
-
-            $transaksi->tipe_transaksi = 'Checkin';
-            $transaksi->nama_pelanggan = $member->nama_member;
-            $transaksi->member_id      = $member->id;
-            $transaksi->pelatih_id     = null;
-        }
-
-        // 4. PROSES JIKA MEMBER MEMBAYAR IURAN PERPANJANG
-        elseif ($request->tipe_kunjungan === 'perpanjang') {
-            $member = Member::findOrFail($request->member_id);
-
-            // Hitung tanggal kedaluwarsa baru (+30 hari)
-            $baseDate = Carbon::parse($member->tanggal_kadaluarsa)->isPast() ? Carbon::now() : Carbon::parse($member->tanggal_kadaluarsa);
-            $member->tanggal_kadaluarsa = $baseDate->addDays(30);
-            $member->save();
-
-            $transaksi->tipe_transaksi = 'Perpanjang';
-            $transaksi->nama_pelanggan = $member->nama_member;
-            $transaksi->member_id      = $member->id;
-            $transaksi->pelatih_id     = null;
-        }
-
-        // 5. PROSES JIKA MEMBER SEWA JASA PELATIH (PERSONAL TRAINER)
-        elseif ($request->tipe_kunjungan === 'sewa_pt') {
-            $member = Member::findOrFail($request->member_id);
-            $pelatih = Pelatih::findOrFail($request->pelatih_id);
-
-            $transaksi->tipe_transaksi = 'Sewa PT';
-            $transaksi->nama_pelanggan = $member->nama_member;
-            $transaksi->member_id      = $member->id; // Terelasi ke Member
-            $transaksi->pelatih_id     = $pelatih->id; // Terelasi ke Pelatih
-        }
-
-        // Simpan data transaksi keuangan ke database kas pusat
-        $transaksi->nominal = (int) $request->nominal;
-        $transaksi->save();
-
-        return redirect()->back()->with('sukses', 'Transaksi ' . $transaksi->tipe_transaksi . ' berhasil diproses!');
+        return redirect()->back()->with('sukses', 'Data pengunjung harian berhasil dicatat.');
     }
 }

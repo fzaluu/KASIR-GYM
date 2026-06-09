@@ -265,7 +265,7 @@
                         <div class="action-btns">
                             <button class="btn-edit" data-harian="{{ json_encode($row) }}" onclick="bukaModalEdit(JSON.parse(this.getAttribute('data-harian')))">Edit</button>
                             
-                            <form action="{{ route('harian.destroy', $row->id) }}" method="POST" onsubmit="return confirm('Hapus data kunjungan harian ini, jirr?')">
+                            <form action="{{ route('harian.destroy', $row->id) }}" method="POST" onsubmit="return confirm('Hapus data kunjungan harian ini?')">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn-hapus">Hapus</button>

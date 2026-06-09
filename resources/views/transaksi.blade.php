@@ -163,12 +163,9 @@
             <form action="{{ route('transaksi.index') }}" method="GET" class="filter-form">
                 <div class="form-group">
                     <label>Filter Hari / Tanggal</label>
-                    <input type="date" name="tanggal" value="{{ request('tanggal') }}" class="form-control">
+                    <input type="date" name="tanggal" class="form-control" value="{{ request('tanggal') }}">
                 </div>
-                <div class="form-group">
-                    <label>Filter Bulan</label>
-                    <input type="month" name="bulan" value="{{ request('bulan') }}" class="form-control">
-                </div>
+                
                 <div class="form-group">
                     <label>Tipe Transaksi</label>
                     <select name="tipe_transaksi" class="form-control">
@@ -177,7 +174,7 @@
                         <option value="Baru" {{ request('tipe_transaksi') == 'Baru' ? 'selected' : '' }}>Member Baru</option>
                         <option value="Perpanjang" {{ request('tipe_transaksi') == 'Perpanjang' ? 'selected' : '' }}>Perpanjang Member</option>
                         <option value="Checkin" {{ request('tipe_transaksi') == 'Checkin' ? 'selected' : '' }}>Check-in Member</option>
-                        <option value="Sewa PT" {{ request('tipe_transaksi') == 'Sewa PT' ? 'selected' : '' }}>Sewa Jasa PT</option>
+                        <option value="Sewa_pt" {{ request('tipe_transaksi') == 'Sewa_pt' ? 'selected' : '' }}>Sewa Jasa PT (Pelatih)</option>
                     </select>
                 </div>
                 <button type="submit" class="btn-filter">Cari Filter</button>
@@ -207,7 +204,7 @@
                                 <span class="badge badge-baru">Member Baru</span>
                             @elseif($trx->tipe_transaksi === 'Perpanjang')
                                 <span class="badge badge-perpanjang">Perpanjang Member</span>
-                            @elseif($trx->tipe_transaksi === 'Sewa PT')
+                            @elseif($trx->tipe_transaksi === 'Sewa_pt')
                                 <span class="badge badge-sewa-pt">Sewa Jasa PT</span>
                             @else
                                 <span class="badge badge-checkin">Check-in Member</span>
@@ -215,7 +212,7 @@
                         </td>
                         <td>
                             <strong>{{ $trx->nama_pelanggan }}</strong>
-                            @if($trx->tipe_transaksi === 'Sewa PT' && $trx->pelatih)
+                            @if($trx->tipe_transaksi === 'Sewa_pt' && $trx->pelatih)
                                 <br><small style="color: #64748b;">Pelatih: {{ $trx->pelatih->nama_pelatih }}</small>
                             @endif
                         </td>
@@ -224,7 +221,7 @@
                 @empty
                     <tr>
                         <td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">
-                            Belum ada catatan transaksi keuangan yang masuk.
+                            Belum ada catatan transaksi keuangan yang masuk pada filter ini.
                         </td>
                     </tr>
                 @endforelse
