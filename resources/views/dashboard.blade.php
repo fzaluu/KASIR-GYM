@@ -260,7 +260,6 @@
                 @foreach($logaktivitas as $item)
                 <tr>
                     <td>{{ $item->created_at->format('H:i') }} WIB</td>
-                    {{-- Solusi Revisi Poin 4: Membaca nama ter-update dari relasi member/pelatih logis --}}
                     <td><strong>{{ $item->nama_pelanggan }}</strong></td>
                     <td>
                         @if($item->tipe_transaksi == 'Harian')
@@ -290,6 +289,11 @@
         </table>
     </div>
 
+    @php
+        // Ambil array ID member yang sudah melakukan check-in hari ini dari data logaktivitas dashboard
+        $idSudahCheckin = $logaktivitas->where('tipe_transaksi', 'Checkin')->pluck('member_id')->toArray();
+    @endphp
+
     <div class="modal-overlay" id="modalTransaksi">
         <div class="modal-box">
             <div class="modal-header">
@@ -313,11 +317,23 @@
                     <input type="text" name="nama" class="form-control" placeholder="Masukkan nama pengunjung harian...">
                 </div>
 
-                <div class="form-group" id="selectMember" style="display: none;">
-                    <label>Pilih Nama Member:</label>
-                    <select name="member_id" class="form-control">
-                        <option value="">-- Pilih Member --</option>
+                <div class="form-group" id="selectMemberCheckin" style="display: none;">
+                    <label>Pilih Nama Member (Hanya Member Aktif):</label>
+                    <select name="member_id" id="memberIdCheckin" class="form-control">
+                        <option value="">-- Pilih Member Aktif --</option>
                         @foreach($daftarMember as $member)
+                            @if(!in_array($member->id, $idSudahCheckin))
+                                <option value="{{ $member->id }}">{{ $member->nama_member }} ({{ $member->nomor_telepon }})</option>
+                            @endif
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="form-group" id="selectMemberPerpanjang" style="display: none;">
+                    <label>Pilih Nama Member:</label>
+                    <select name="member_id" id="memberIdPerpanjang" class="form-control" disabled>
+                        <option value="">-- Pilih Member --</option>
+                        @foreach($daftarMemberSemua as $member)
                             <option value="{{ $member->id }}">{{ $member->nama_member }} ({{ $member->nomor_telepon }})</option>
                         @endforeach
                     </select>
@@ -335,7 +351,6 @@
 @endsection
 
 @push('scripts')
-
 <script>
     const modal = document.getElementById('modalTransaksi');
     const btnBuka = document.getElementById('btnBukaModal');
@@ -343,7 +358,10 @@
     
     const radioTipe = document.querySelectorAll('input[name="tipe_kunjungan"]');
     const inputNama = document.getElementById('inputNama');
-    const selectMember = document.getElementById('selectMember');
+    const selectMemberCheckin = document.getElementById('selectMemberCheckin');
+    const selectMemberPerpanjang = document.getElementById('selectMemberPerpanjang');
+    const memberIdCheckin = document.getElementById('memberIdCheckin');
+    const memberIdPerpanjang = document.getElementById('memberIdPerpanjang');
     const inputNominal = document.getElementById('inputNominal');
     const fieldNominal = document.getElementById('nominalInput');
 
@@ -352,21 +370,25 @@
 
     radioTipe.forEach(radio => {
         radio.addEventListener('change', (e) => {
-            // Reset tampilan form
             inputNama.style.display = 'none';
-            selectMember.style.display = 'none';
+            selectMemberCheckin.style.display = 'none';
+            selectMemberPerpanjang.style.display = 'none';
+            memberIdCheckin.disabled = true;
+            memberIdPerpanjang.disabled = true;
             inputNominal.style.display = 'block';
 
             if (e.target.value === 'harian') {
                 inputNama.style.display = 'block';
-                fieldNominal.value = '8000'; // Biaya harian standard
+                fieldNominal.value = '8000';
             } else if (e.target.value === 'checkin') {
-                selectMember.style.display = 'block';
-                inputNominal.style.display = 'none'; // Check-in member lama gratis
+                selectMemberCheckin.style.display = 'block';
+                memberIdCheckin.disabled = false;
+                inputNominal.style.display = 'none';
                 fieldNominal.value = '0';
             } else if (e.target.value === 'perpanjang') {
-                selectMember.style.display = 'block';
-                fieldNominal.value = '100000'; // Biaya iuran bulanan
+                selectMemberPerpanjang.style.display = 'block';
+                memberIdPerpanjang.disabled = false;
+                fieldNominal.value = '100000';
             }
         });
     });

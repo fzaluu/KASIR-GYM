@@ -5,7 +5,6 @@
 
 @push('styles')
 <style>
-    /* 🔍 TOP BAR: TOMBOL & FILTER CARI */
     .top-bar {
         display: flex;
         justify-content: space-between;
@@ -28,7 +27,6 @@
     }
     .btn-tambah:hover { background-color: #059669; }
 
-    /* Kotak Cari Nama Member */
     .filter-box form {
         display: flex;
         gap: 8px;
@@ -57,7 +55,6 @@
     }
     .btn-filter:hover { background-color: #334155; }
 
-    /* 📋 TABLE STYLE */
     .table-container {
         background-color: #fff;
         padding: 24px;
@@ -86,7 +83,6 @@
 
     tr:hover td { background-color: #f8fafc; }
 
-    /* Badge Status Sisa Hari */
     .badge {
         padding: 4px 10px;
         border-radius: 12px;
@@ -97,7 +93,6 @@
     .badge-aktif { background-color: #d1fae5; color: #065f46; }
     .badge-habis { background-color: #fee2e2; color: #991b1b; }
 
-    /* Tombol Aksi */
     .action-btns {
         display: flex;
         gap: 6px;
@@ -116,12 +111,11 @@
     }
     .btn-action:hover { opacity: 0.9; }
 
-    .btn-checkin { background-color: #10b981; } /* Hijau */
-    .btn-perpanjang { background-color: #38bdf8; } /* Biru langit */
-    .btn-edit { background-color: #f59e0b; } /* Orange */
-    .btn-hapus { background-color: #ef4444; } /* Merah */
+    .btn-checkin { background-color: #10b981; }
+    .btn-perpanjang { background-color: #38bdf8; }
+    .btn-edit { background-color: #f59e0b; }
+    .btn-hapus { background-color: #ef4444; }
 
-    /* 🏛️ MODAL STYLE */
     .modal-overlay {
         position: fixed;
         top: 0; left: 0; width: 100%; height: 100%;
@@ -196,9 +190,8 @@
         <button class="btn-tambah" onclick="bukaModalTambah()">[+] DAFTARKAN MEMBER BARU VIA FORM</button>
         
         <div class="filter-box">
-            <form action="{{ route('member.index') }}" method="GET">
-                <input type="text" name="cari" class="input-filter" placeholder="Cari nama member..." value="{{ request('cari') }}">
-                <button type="submit" class="btn-filter">Cari</button>
+            <form action="{{ route('member.index') }}" method="GET" onsubmit="return false;">
+                <input type="text" id="inputCariMember" name="cari" class="input-filter" placeholder="Cari nama member..." value="{{ request('cari') }}">
             </form>
         </div>
     </div>
@@ -216,17 +209,16 @@
                     <th>Aksi Khusus Kasir</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="tabelBodyMember">
                 @forelse($daftarMember as $index => $row)
                 @php
-                    // Logika menghitung sisa hari masa aktif member
                     $tanggalSekarang = \Carbon\Carbon::today();
                     $tanggalExpired = \Carbon\Carbon::parse($row->tanggal_kadaluarsa);
                     $sisaHari = $tanggalSekarang->diffInDays($tanggalExpired, false);
                 @endphp
-                <tr>
+                <tr class="baris-member">
                     <td>{{ $index + 1 }}</td>
-                    <td><strong>{{ $row->nama_member }}</strong></td>
+                    <td class="nama-target"><strong>{{ $row->nama_member }}</strong></td>
                     <td>{{ $row->nomor_telepon }}</td>
                     <td>{{ date('d M Y', strtotime($row->tanggal_kadaluarsa)) }}</td>
                     <td>
@@ -240,12 +232,16 @@
                     <td>
                         <div class="action-btns">
                             @if($sisaHari >= 0)
-                            <form action="{{ route('member.checkin', $row->id) }}" method="POST" onsubmit="return confirm('Proses Check-In masuk gym untuk member {{ $row->nama_member }}?')">
-                                @csrf
-                                <button type="submit" class="btn-action btn-checkin">Check-In</button>
-                            </form>
+                                @if(in_array($row->id, $memberSudahCheckinHariIni ?? []))
+                                    <button class="btn-action btn-checkin" style="background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed;" title="Member ini sudah melakukan check-in hari ini!" disabled>Sudah Check-In</button>
+                                @else
+                                    <form action="{{ route('member.checkin', $row->id) }}" method="POST" onsubmit="return confirm('Proses Check-In masuk gym untuk member {{ $row->nama_member }}?')">
+                                        @csrf
+                                        <button type="submit" class="btn-action btn-checkin">Check-In</button>
+                                    </form>
+                                @endif
                             @else
-                            <button class="btn-action btn-checkin" style="background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed;" title="Masa aktif habis, silakan perpanjang!" disabled>Check-In</button>
+                                <button class="btn-action btn-checkin" style="background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed;" title="Masa aktif habis, silakan perpanjang!" disabled>Check-In</button>
                             @endif
 
                             <button class="btn-action btn-perpanjang" data-member="{{ json_encode($row) }}" onclick="bukaModalPerpanjang(JSON.parse(this.getAttribute('data-member')))">Perpanjang</button>
@@ -261,7 +257,7 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
+                <tr id="barisKosongBawaanMember">
                     <td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">
                         Belum ada data member terdaftar di database.
                     </td>
@@ -337,6 +333,48 @@
     const inputNominal = document.getElementById('inputNominal');
     const inputKadaluarsa = document.getElementById('inputKadaluarsa');
 
+    const inputCari = document.getElementById('inputCariMember');
+    const tabelBody = document.getElementById('tabelBodyMember');
+
+    inputCari.addEventListener('keyup', function() {
+        const keyword = inputCari.value.toLowerCase();
+        const rows = tabelBody.getElementsByClassName('baris-member');
+        let ditemukan = false;
+
+        for (let i = 0; i < rows.length; i++) {
+            const cellNama = rows[i].getElementsByClassName('nama-target')[0];
+            if (cellNama) {
+                const teksNama = cellNama.textContent || cellNama.innerText;
+                if (teksNama.toLowerCase().indexOf(keyword) > -1) {
+                    rows[i].style.display = "";
+                    ditemukan = true;
+                } else {
+                    rows[i].style.display = "none";
+                }
+            }
+        }
+
+        const pesanLama = document.getElementById('pesanKosongCariMember');
+        if (pesanLama) pesanLama.remove();
+
+        const bawaanKosong = document.getElementById('barisKosongBawaanMember');
+        if (bawaanKosong) {
+            if (keyword !== '') {
+                bawaanKosong.style.display = "none";
+            } else if (rows.length === 0) {
+                bawaanKosong.style.display = "";
+                ditemukan = true;
+            }
+        }
+
+        if (!ditemukan && rows.length > 0) {
+            const tr = document.createElement('tr');
+            tr.id = 'pesanKosongCariMember';
+            tr.innerHTML = `<td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Tidak ada data member dengan kata kunci "${inputCari.value}"</td>`;
+            tabelBody.appendChild(tr);
+        }
+    });
+
     function bukaModalTambah() {
         modalTitle.innerText = "Daftarkan Member Baru";
         form.action = "{{ route('member.store') }}";
@@ -344,7 +382,6 @@
         btnSubmit.innerText = "DAFTARKAN MEMBER (BAYAR BULANAN)";
         btnSubmit.style.backgroundColor = "#10b981";
 
-        // Tampilkan input bawaan tambah
         groupNama.style.display = "block";
         groupTelepon.style.display = "block";
         groupNominal.style.display = "block";
@@ -372,7 +409,7 @@
 
         groupNama.style.display = "block";
         groupTelepon.style.display = "block";
-        groupNominal.style.display = "none"; // Sembunyikan pembayaran saat edit teks biasa
+        groupNominal.style.display = "none";
         groupKadaluarsa.style.display = "block";
         infoBoxPerpanjang.style.display = "none";
         infoBoxSistem.innerHTML = "⚠️ <strong>Perhatian:</strong> Mengubah tanggal kadaluarsa secara manual akan langsung memotong/menambah masa aktif member tanpa mencatat transaksi keuangan baru.";
@@ -393,7 +430,6 @@
         btnSubmit.innerText = "KONFIRMASI PERPANJANG";
         btnSubmit.style.backgroundColor = "#38bdf8";
 
-        // Sembunyikan input nama & hp karena cuma mau bayar iuran perpanjang
         groupNama.style.display = "none";
         groupTelepon.style.display = "none";
         groupKadaluarsa.style.display = "none";

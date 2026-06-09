@@ -16,14 +16,20 @@ class MemberController extends Controller
     {
         $query = Member::query();
 
-        // Solusi Revisi Poin 5: Fitur Search Member yang presisi
         if ($request->filled('cari')) {
             $query->where('nama_member', 'LIKE', '%' . $request->cari . '%')
                   ->orWhere('nomor_telepon', 'LIKE', '%' . $request->cari . '%');
         }
 
         $daftarMember = $query->orderBy('nama_member', 'asc')->get();
-        return view('member', compact('daftarMember'));
+
+        // Ambil semua ID member yang SUDAH check-in hari ini untuk mengunci tombol di view
+        $memberSudahCheckinHariIni = Transaksi::where('tipe_transaksi', 'Checkin')
+                                              ->whereDate('created_at', Carbon::today())
+                                              ->pluck('member_id')
+                                              ->toArray();
+
+        return view('member', compact('daftarMember', 'memberSudahCheckinHariIni'));
     }
 
     /**
@@ -37,47 +43,39 @@ class MemberController extends Controller
             'nominal'       => 'required|numeric',
         ]);
 
-        // 🛠️ LANGKAH 1: Validasi nomor HP unik terlebih dahulu (Cegah No HP sama tapi nama beda)
         $cekNomorSama = Member::where('nomor_telepon', $request->nomor_telepon)->first();
         if ($cekNomorSama) {
-            // Jika nomor HP sama tapi namanya diinput berbeda, langsung blokir pendaftaran!
             if ($cekNomorSama->nama_member !== $request->nama_member) {
                 return redirect()->route('member.index')->with('eror', 'Gagal! Nomor HP ' . $request->nomor_telepon . ' sudah terdaftar di sistem atas nama "' . $cekNomorSama->nama_member . '". Gunakan nomor lain!');
             }
         }
 
-        // 🔍 Cari apakah nama DAN nomor HP ini sudah cocok & pernah terdaftar sebelumnya
         $memberLama = Member::where('nama_member', $request->nama_member)
                             ->where('nomor_telepon', $request->nomor_telepon)
                             ->first();
 
         if ($memberLama) {
-            // Cek status apakah dia masih aktif atau sudah expired
             $apakahMasihAktif = Carbon::parse($memberLama->tanggal_kadaluarsa)->isFuture();
 
-            // 🚫 KASUS 1: Jika masih aktif, BLOKIR pendaftaran duplikat
             if ($apakahMasihAktif) {
                 return redirect()->route('member.index')->with('eror', 'Gagal! Member atas nama "' . $memberLama->nama_member . '" statusnya masih AKTIF sampai ' . date('d M Y', strtotime($memberLama->tanggal_kadaluarsa)) . '. Tidak perlu di-input ulang!!');
             }
 
-            // 🔄 KASUS 2: Jika sudah expired, OTOMATIS perpanjang durasinya (+30 hari dari hari ini)
             $memberLama->update([
                 'tanggal_kadaluarsa' => Carbon::today()->addDays(30)
             ]);
 
-            // Solusi Sinkronisasi Nama Tipe Transaksi (Poin 8 & 9) + Menyimpan member_id
             Transaksi::create([
                 'member_id'      => $memberLama->id,
                 'nama_pelanggan' => $memberLama->nama_member,
                 'nomor_telepon'  => $memberLama->nomor_telepon,
-                'tipe_transaksi' => 'Perpanjang', // Disamakan dengan dashboard
+                'tipe_transaksi' => 'Perpanjang',
                 'nominal'        => $request->nominal,
             ]);
 
             return redirect()->route('member.index')->with('sukses', 'Sistem Mendeteksi Member Lama! Status keanggotaan "' . $memberLama->nama_member . '" otomatis diperpanjang +30 hari ke depan.');
         }
 
-        // ✨ KASUS 3: Jika benar-benar member baru murni (belum ada di DB)
         $memberBaru = Member::create([
             'nama_member'        => $request->nama_member,
             'nomor_telepon'      => $request->nomor_telepon,
@@ -85,12 +83,11 @@ class MemberController extends Controller
             'total_checkin'      => 0,
         ]);
 
-        // Solusi Sinkronisasi Nama Tipe Transaksi (Poin 8 & 9) + Menyimpan member_id
         Transaksi::create([
             'member_id'      => $memberBaru->id,
             'nama_pelanggan' => $memberBaru->nama_member,
             'nomor_telepon'  => $memberBaru->nomor_telepon,
-            'tipe_transaksi' => 'Baru', // Disamakan dengan dashboard
+            'tipe_transaksi' => 'Baru',
             'nominal'        => $request->nominal,
         ]);
 
@@ -115,7 +112,6 @@ class MemberController extends Controller
             'tanggal_kadaluarsa' => $request->tanggal_kadaluarsa,
         ]);
 
-        // Solusi Poin 4: Otomatis sinkronkan nama terbaru di log aktivitas/transaksi kas masuk hari ini jika ada edit nama
         Transaksi::where('member_id', $member->id)->update([
             'nama_pelanggan' => $request->nama_member
         ]);
@@ -145,7 +141,6 @@ class MemberController extends Controller
             return redirect()->route('member.index')->with('eror', 'Gagal Check-In! Masa aktif member ini sudah habis.');
         }
 
-        // 🛠️ Solusi Revisi Poin 2: Dikunci pakai member_id agar anti-jebol saat nama di-edit
         $sudahCheckinHariIni = Transaksi::where('member_id', $member->id)
                                          ->where('tipe_transaksi', 'Checkin')
                                          ->whereDate('created_at', Carbon::today())
@@ -155,14 +150,13 @@ class MemberController extends Controller
             return redirect()->route('member.index')->with('eror', 'Gagal! Member bernama "' . $member->nama_member . '" sudah melakukan check-in hari ini.');
         }
 
-        // Jika belum ada check-in hari ini, maka proses dilanjutkan
         $member->increment('total_checkin'); 
 
         Transaksi::create([
             'member_id'      => $member->id,
             'nama_pelanggan' => $member->nama_member,
             'nomor_telepon'  => $member->nomor_telepon,
-            'tipe_transaksi' => 'Checkin', // Disamakan dengan dashboard
+            'tipe_transaksi' => 'Checkin',
             'nominal'        => 0,
         ]);
 
@@ -187,17 +181,15 @@ class MemberController extends Controller
             $expiredBaru = $expiredLama->addDays(30);
         }
 
-        // 1. Update data masa aktif member di database
         $member->update([
             'tanggal_kadaluarsa' => $expiredBaru
         ]);
 
-        // 2. Catat iuran bulanan tersebut ke riwayat transaksi kas keuangan
         Transaksi::create([
             'member_id'      => $member->id,
             'nama_pelanggan' => $member->nama_member,
             'nomor_telepon'  => $member->nomor_telepon,
-            'tipe_transaksi' => 'Perpanjang', // Disamakan dengan dashboard
+            'tipe_transaksi' => 'Perpanjang',
             'nominal'        => $request->nominal,
         ]);
 

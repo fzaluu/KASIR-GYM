@@ -5,7 +5,6 @@
 
 @push('styles')
 <style>
-    /* 📊 AREA KARTU REKAP (TREND MONITORING) */
     .rekap-container {
         display: flex;
         gap: 20px;
@@ -44,7 +43,6 @@
         margin-top: 5px;
     }
 
-    /* 🔍 TOP BAR: TOMBOL & FILTER TANGGAL */
     .top-bar {
         display: flex;
         justify-content: space-between;
@@ -67,7 +65,6 @@
     }
     .btn-tambah:hover { background-color: #059669; }
 
-    /* Kotak Cari & Filter Kalender */
     .filter-box form {
         display: flex;
         gap: 8px;
@@ -96,7 +93,6 @@
     }
     .btn-filter:hover { background-color: #334155; }
 
-    /* 📋 TABLE STYLE */
     .table-container {
         background-color: #fff;
         padding: 24px;
@@ -154,7 +150,6 @@
     }
     .btn-hapus:hover { background-color: #dc2626; }
 
-    /* 🏛️ MODAL STYLE */
     .modal-overlay {
         position: fixed;
         top: 0; left: 0; width: 100%; height: 100%;
@@ -235,10 +230,9 @@
         <button class="btn-tambah" onclick="bukaModalTambah()">[+] INPUT PENGUNJUNG HARIAN</button>
         
         <div class="filter-box">
-            <form action="{{ route('harian.index') }}" method="GET">
-                <input type="text" name="cari" class="input-filter" placeholder="Cari nama..." value="{{ request('cari') }}">
-                <input type="date" name="tanggal" class="input-filter" value="{{ request('tanggal', date('Y-m-d')) }}">
-                <button type="submit" class="btn-filter">Filter Data</button>
+            <form action="{{ route('harian.index') }}" method="GET" onsubmit="return false;">
+                <input type="text" id="inputCariHarian" name="cari" class="input-filter" placeholder="Cari nama..." value="{{ request('cari') }}">
+                <input type="date" name="tanggal" class="input-filter" value="{{ request('tanggal', date('Y-m-d')) }}" onchange="this.form.submit()">
             </form>
         </div>
     </div>
@@ -254,12 +248,12 @@
                     <th>Aksi</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="tabelBodyHarian">
                 @forelse($daftarHarian as $index => $row)
-                <tr>
+                <tr class="baris-harian">
                     <td>{{ $index + 1 }}</td>
                     <td>{{ date('H:i', strtotime($row->created_at)) }} WIB</td>
-                    <td><strong>{{ $row->nama_pelanggan }}</strong></td>
+                    <td class="nama-target"><strong>{{ $row->nama_pelanggan }}</strong></td>
                     <td><span style="color: #10b981; font-weight: 600;">Rp {{ number_format($row->nominal, 0, ',', '.') }}</span></td>
                     <td>
                         <div class="action-btns">
@@ -274,8 +268,8 @@
                     </td>
                 </tr>
                 @empty
-                <tr>
-                    <td colspan="6" style="text-align: center; color: #94a3b8; padding: 20px;">
+                <tr id="barisKosongBawaan">
+                    <td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">
                         Tidak ada pengunjung harian pada tanggal yang dipilih.
                     </td>
                 </tr>
@@ -300,7 +294,6 @@
                     <input type="text" name="nama_pelanggan" id="inputNama" placeholder="Nama pengunjung harian..." required>
                 </div>
 
-
                 <div class="form-group">
                     <label>Nominal Bayar (Rp):</label>
                     <input type="number" name="nominal" id="inputNominal" value="8000" required>
@@ -324,13 +317,55 @@
     const inputNama = document.getElementById('inputNama');
     const inputNominal = document.getElementById('inputNominal');
 
+    const inputCari = document.getElementById('inputCariHarian');
+    const tabelBody = document.getElementById('tabelBodyHarian');
+
+    inputCari.addEventListener('keyup', function() {
+        const keyword = inputCari.value.toLowerCase();
+        const rows = tabelBody.getElementsByClassName('baris-harian');
+        let ditemukan = false;
+
+        for (let i = 0; i < rows.length; i++) {
+            const cellNama = rows[i].getElementsByClassName('nama-target')[0];
+            if (cellNama) {
+                const teksNama = cellNama.textContent || cellNama.innerText;
+                if (teksNama.toLowerCase().indexOf(keyword) > -1) {
+                    rows[i].style.display = "";
+                    ditemukan = true;
+                } else {
+                    rows[i].style.display = "none";
+                }
+            }
+        }
+
+        const pesanLama = document.getElementById('pesanKosongCari');
+        if (pesanLama) pesanLama.remove();
+
+        const bawaanKosong = document.getElementById('barisKosongBawaan');
+        if (bawaanKosong) {
+            if (keyword !== '') {
+                bawaanKosong.style.display = "none";
+            } else if (rows.length === 0) {
+                bawaanKosong.style.display = "";
+                ditemukan = true;
+            }
+        }
+
+        if (!ditemukan && rows.length > 0) {
+            const tr = document.createElement('tr');
+            tr.id = 'pesanKosongCari';
+            tr.innerHTML = `<td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">Tidak ada pengunjung harian dengan kata kunci "${inputCari.value}"</td>`;
+            tabelBody.appendChild(tr);
+        }
+    });
+
     function bukaModalTambah() {
         modalTitle.innerText = "Input Pengunjung Harian Baru";
-        form.action = "{{ route('harian.store') }}"; // Menembak ke rute store bawaan resource
+        form.action = "{{ route('harian.store') }}";
         methodField.innerHTML = "";
         
         inputNama.value = "";
-        inputNominal.value = "8000"; // Default tarif Virgo Gym
+        inputNominal.value = "8000";
         btnSubmit.innerText = "INPUT KUNJUNGAN";
         
         modal.classList.add('show');
@@ -338,7 +373,7 @@
 
     function bukaModalEdit(data) {
         modalTitle.innerText = "Edit Data Pengunjung";
-        form.action = "/harian/" + data.id; // Menembak ke rute update resource standar (/harian/{id})
+        form.action = "/harian/" + data.id;
         methodField.innerHTML = `@method('PUT')`;
         
         inputNama.value = data.nama_pelanggan;
