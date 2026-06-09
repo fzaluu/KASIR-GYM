@@ -29,7 +29,7 @@
 
     .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.6); display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: all 0.25s ease; z-index: 999; }
     .modal-overlay.show { opacity: 1; pointer-events: auto; }
-    .modal-box { background-color: #fff; padding: 25px; border-radius: 12px; width: 450px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); transform: scale(0.9); transition: all 0.25s ease; }
+    .modal-box { background-color: #fff; padding: 25px; border-radius: 12px; width: 450px; max-width: 90%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); transform: scale(0.9); transition: all 0.25s ease; box-sizing: border-box; }
     .modal-overlay.show .modal-box { transform: scale(1); }
     .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
     .btn-close { background: none; border: none; font-size: 24px; cursor: pointer; color: #94a3b8; }
@@ -38,6 +38,29 @@
     .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: #334155; }
     .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; background-color: #fff; box-sizing: border-box; }
     .form-group input[readonly] { background-color: #f1f5f9; color: #64748b; cursor: not-allowed; }
+
+    /* 📱 RESPONSIVE MEDIA QUERIES KASIR MOBILE */
+    @media screen and (max-width: 768px) {
+        .table-container {
+            padding: 12px;
+            overflow-x: auto; 
+            -webkit-overflow-scrolling: touch;
+        }
+        table {
+            min-width: 650px; /* Memaksa tabel bisa di-scroll smooth ke samping di HP */
+        }
+        th, td {
+            padding: 10px 12px;
+            font-size: 13px;
+        }
+        .section-block {
+            align-items: stretch; /* Tombol tambah melebar penuh di layar HP */
+        }
+        .btn-tambah, .btn-tambah-user {
+            text-align: center;
+            width: 100%;
+        }
+    }
 </style>
 @endpush
 
