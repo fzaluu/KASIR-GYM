@@ -157,9 +157,7 @@
 @endpush
 
 @section('konten')
-    <div class="table-container">
-        
-        <div class="filter-container">
+    <div class="filter-container">
             <form action="{{ route('transaksi.index') }}" method="GET" class="filter-form">
                 <div class="form-group">
                     <label>Filter Hari / Tanggal</label>
@@ -181,7 +179,7 @@
                 <a href="{{ route('transaksi.index') }}" class="btn-reset">Reset</a>
             </form>
         </div>
-
+    <div class="table-container">
         <table>
             <thead>
                 <tr>
