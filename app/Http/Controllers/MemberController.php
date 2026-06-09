@@ -35,7 +35,16 @@ class MemberController extends Controller
             'nominal'       => 'required|numeric',
         ]);
 
-        // 🔍 Cari apakah nama DAN nomor HP ini sudah pernah terdaftar sebelumnya
+        // 🛠️ LANGKAH 1: Validasi nomor HP unik terlebih dahulu (Cegah No HP sama tapi nama beda)
+        $cekNomorSama = Member::where('nomor_telepon', $request->nomor_telepon)->first();
+        if ($cekNomorSama) {
+            // Jika nomor HP sama tapi namanya diinput berbeda, langsung blokir pendaftaran!
+            if ($cekNomorSama->nama_member !== $request->nama_member) {
+                return redirect()->route('member.index')->with('eror', 'Gagal! Nomor HP ' . $request->nomor_telepon . ' sudah terdaftar di sistem atas nama "' . $cekNomorSama->nama_member . '". Gunakan nomor lain!');
+            }
+        }
+
+        // 🔍 Cari apakah nama DAN nomor HP ini sudah cocok & pernah terdaftar sebelumnya
         $memberLama = Member::where('nama_member', $request->nama_member)
                             ->where('nomor_telepon', $request->nomor_telepon)
                             ->first();
@@ -54,11 +63,10 @@ class MemberController extends Controller
                 'tanggal_kadaluarsa' => Carbon::today()->addDays(30)
             ]);
 
-            // 🛠️ PERBAIKAN: Mengubah tipe_transaksi menjadi 'Perpanjang Member' agar terbaca di dashboard
             Transaksi::create([
                 'nama_pelanggan' => $memberLama->nama_member,
                 'nomor_telepon'  => $memberLama->nomor_telepon,
-                'tipe_transaksi' => 'Perpanjang',
+                'tipe_transaksi' => 'Perpanjang Member',
                 'nominal'        => $request->nominal,
             ]);
 
@@ -73,11 +81,10 @@ class MemberController extends Controller
             'total_checkin'      => 0,
         ]);
 
-        // 🛠️ PERBAIKAN: Mengubah tipe_transaksi menjadi 'Pendaftaran Member' agar terbaca di dashboard
         Transaksi::create([
             'nama_pelanggan' => $request->nama_member,
             'nomor_telepon'  => $request->nomor_telepon,
-            'tipe_transaksi' => 'Baru',
+            'tipe_transaksi' => 'Pendaftaran Member',
             'nominal'        => $request->nominal,
         ]);
 
@@ -127,10 +134,20 @@ class MemberController extends Controller
             return redirect()->route('member.index')->with('eror', 'Gagal Check-In! Masa aktif member ini sudah habis.');
         }
 
-        // Sinkronkan hitungan total check-in member
+        // 🛠️ LANGKAH 2: Validasi Pembatasan Check-In Maksimal 1x Sehari
+        // Sistem memeriksa apakah hari ini sudah ada log transaksi check-in untuk nama member ini
+        $sudahCheckinHariIni = Transaksi::where('nama_pelanggan', $member->nama_member)
+                                         ->where('tipe_transaksi', 'Check-In Member')
+                                         ->whereDate('created_at', Carbon::today())
+                                         ->exists();
+
+        if ($sudahCheckinHariIni) {
+            return redirect()->route('member.index')->with('eror', 'Gagal! Member bernama "' . $member->nama_member . '" sudah melakukan check-in hari ini. Tidak boleh duplikat!');
+        }
+
+        // Jika belum ada check-in hari ini, maka proses dilanjutkan
         $member->increment('total_checkin'); 
 
-        // 🛠️ PERBAIKAN: Mencatat aktivitas log kedatangan harian ke tabel transaksi (Nominal 0 karena tidak ada transaksi uang baru)
         Transaksi::create([
             'nama_pelanggan' => $member->nama_member,
             'nomor_telepon'  => $member->nomor_telepon,
@@ -165,7 +182,6 @@ class MemberController extends Controller
         ]);
 
         // 2. Catat iuran bulanan tersebut ke riwayat transaksi kas keuangan
-        // 🛠️ PERBAIKAN: Dipastikan string tipe_transaksi bernilai 'Perpanjang Member' agar sinkron dengan pembacaan widget dashboard
         Transaksi::create([
             'nama_pelanggan' => $member->nama_member,
             'nomor_telepon'  => $member->nomor_telepon,

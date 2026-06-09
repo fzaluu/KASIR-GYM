@@ -5,12 +5,12 @@
 
 @push('styles')
 <style>
-    /* 🛠️ PERBAIKAN GRID: Diubah menjadi repeat(3, 1fr) agar muat 3 card sejajar secara horizontal */
+    /* PERBAIKAN GRID: Diubah menjadi repeat(3, 1fr) agar muat 3 card sejajar secara horizontal */
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 20px;
-        margin-bottom: 25px; /* Memberi jarak aman ke tombol di bawahnya */
+        margin-bottom: 25px;
     }
 
     .card {
@@ -171,29 +171,30 @@
         color: #334155;
     }
 
-    .form-group input[type="text"],
-    .form-group input[type="number"] {
+    .form-control {
         width: 100%;
         padding: 10px 14px;
         border: 1px solid #cbd5e1;
         border-radius: 8px;
         font-size: 14px;
         outline: none;
+        background-color: #fff;
+        box-sizing: border-box;
     }
 
-    .form-group input:focus {
+    .form-control:focus {
         border-color: #38bdf8;
         box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
     }
 
-    .radio-group {
-        display: flex;
-        flex-direction: column;
+    .radio-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
         gap: 10px;
         margin-top: 6px;
     }
 
-    .radio-group label {
+    .radio-grid label {
         font-weight: 400;
         cursor: pointer;
         display: flex;
@@ -219,16 +220,13 @@
         background-color: #059669;
     }
 
-    /* CSS Responsive Dashboard di HP */
     @media screen and (max-width: 1024px) {
-        /* Untuk tablet, bagi menjadi 2 kolom atau biarkan proporsional */
         .stats-grid {
             grid-template-columns: repeat(2, 1fr);
         }
     }
 
     @media screen and (max-width: 768px) {
-        /* 🛠️ PERBAIKAN RESPONSIVE: Mengembalikan grid ke 1 kolom penuh saat layar HP */
         .stats-grid {
             grid-template-columns: 1fr;
             gap: 12px;
@@ -253,6 +251,7 @@
         table { min-width: 550px; }
         th, td { padding: 10px 12px; font-size: 13px; }
         .modal-box { width: 90%; padding: 20px; }
+        .radio-grid { grid-template-columns: 1fr; }
     }
 </style>
 @endpush
@@ -303,31 +302,28 @@
             <tbody>
                 @foreach($logaktivitas as $item)
                 <tr>
-                    <td>{{ $item->created_at->format('H:i') }}</td>
-                    <td>{{ $item->tipe_transaksi }} ({{ $item->nama_pelanggan }})</td>
+                    <td>{{ $item->created_at->format('H:i') }} WIB</td>
+                    <td><strong>{{ $item->nama_pelanggan }}</strong></td>
                     <td>
-                        {{-- 🛠️ MENYINKRONKAN KATA KUNCI LOG AGAR SESUAI DENGAN ATURAN INPUT BARU --}}
                         @if($item->tipe_transaksi == 'Harian')
-                             Masuk Harian
-                        @elseif($item->tipe_transaksi == 'Check-In Member' || $item->tipe_transaksi == 'Checkin')
+                             Kunjungan Harian
+                        @elseif($item->tipe_transaksi == 'Checkin')
                             Check-in Member Lama    
-                        @elseif($item->tipe_transaksi == 'Perpanjang Member' || $item->tipe_transaksi == 'Perpanjang')
-                            Perpanjang Member    
-                        @elseif($item->tipe_transaksi == 'Pendaftaran Member' || $item->tipe_transaksi == 'Baru')
+                        @elseif($item->tipe_transaksi == 'Perpanjang')
+                            Perpanjang Masa Aktif Member    
+                        @elseif($item->tipe_transaksi == 'Baru')
                             Pendaftaran Member Baru
-                        @elseif($item->tipe_transaksi == 'Sewa PT Perbulan' || $item->tipe_transaksi == 'sewa_bulanan')
-                            Sewa PT Bulanan
-                        @elseif($item->tipe_transaksi == 'Sewa PT Perhari' || $item->tipe_transaksi == 'sewa_perhari')
-                            Sewa PT Harian
+                        @elseif($item->tipe_transaksi == 'Sewa PT')
+                            Sewa Jasa PT ({{ $item->pelatih->nama_pelatih ?? 'Pelatih' }})
                         @else
-                            Tipe Tidak Diketahui
+                            {{ $item->tipe_transaksi }}
                         @endif
                     </td>
                     <td>
                         @if($item->nominal == 0)
-                            -
+                            <span style="color: #64748b; font-weight: 600;">Gratis</span>
                         @else
-                            Rp {{ number_format($item->nominal, 0, ',', '.') }}
+                            <span style="color: #10b981; font-weight: 600;">Rp {{ number_format($item->nominal, 0, ',', '.') }}</span>
                         @endif
                     </td>
                 </tr>
@@ -345,29 +341,51 @@
             
             <form action="{{ route('transaksi.store') }}" method="POST">
                 @csrf
+                
                 <div class="form-group">
                     <label>Pilihan Aksi:</label>
-                    <div class="radio-group">
+                    <div class="radio-grid">
                         <label><input type="radio" name="tipe_kunjungan" value="harian" checked> Harian / Non-Member</label>
-                        <label><input type="radio" name="tipe_kunjungan" value="checkin"> Check-in Member Lama</label>
+                        <label><input type="radio" name="tipe_kunjungan" value="checkin"> Check-in Member</label>
                         <label><input type="radio" name="tipe_kunjungan" value="baru"> Member Baru</label>
-                        <label><input type="radio" name="tipe_kunjungan" value="perpanjang"> Perpanjang Member (Renew)</label>
+                        <label><input type="radio" name="tipe_kunjungan" value="perpanjang"> Perpanjang Member</label>
+                        <label><input type="radio" name="tipe_kunjungan" value="sewa_pt"> Sewa Jasa Pelatih (PT)</label>
                     </div>
                 </div>
 
                 <div class="form-group" id="inputNama">
                     <label>Nama Pelanggan / Member:</label>
-                    <input type="text" name="nama" placeholder="Masukkan nama..." required>
+                    <input type="text" name="nama" class="form-control" placeholder="Masukkan nama...">
+                </div>
+
+                <div class="form-group" id="selectMember" style="display: none;">
+                    <label>Pilih Member Terdaftar:</label>
+                    <select name="member_id" class="form-control">
+                        <option value="">-- Cari & Pilih Nama Member --</option>
+                        @foreach($daftarMember as $member)
+                            <option value="{{ $member->id }}">{{ $member->nama_member }} ({{ $member->nomor_telepon }})</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="form-group" id="selectPelatih" style="display: none;">
+                    <label>Pilih Pelatih Gym Yang Bertugas:</label>
+                    <select name="pelatih_id" class="form-control">
+                        <option value="">-- Pilih Nama Pelatih --</option>
+                        @foreach($daftarPelatih as $pelatih)
+                            <option value="{{ $pelatih->id }}">{{ $pelatih->nama_pelatih }}</option>
+                        @endforeach
+                    </select>
                 </div>
 
                 <div class="form-group" id="inputTelepon" style="display: none;">
-                    <label>No. Telepon:</label>
-                    <input type="text" name="nomor_telepon" placeholder="Masukkan nomor telepon...">
+                    <label>No. Telepon Member:</label>
+                    <input type="text" name="nomor_telepon" class="form-control" placeholder="Masukkan nomor telepon...">
                 </div>
 
                 <div class="form-group" id="inputNominal">
                     <label>Total Bayar (Rp):</label>
-                    <input type="number" name="nominal" id="nominalInput" value="8000" required>
+                    <input type="number" name="nominal" id="nominalInput" value="8000" class="form-control" required>
                 </div>
 
                 <button type="submit" class="btn-simpan">SIMPAN TRANSAKSI</button>
@@ -383,36 +401,55 @@
     const btnTutup = document.getElementById('btnTutupModal');
     
     const radioTipe = document.querySelectorAll('input[name="tipe_kunjungan"]');
-    const inputTelepon = document.getElementById('inputTelepon');
     const inputNama = document.getElementById('inputNama');
+    const selectMember = document.getElementById('selectMember');
+    const selectPelatih = document.getElementById('selectPelatih');
+    const inputTelepon = document.getElementById('inputTelepon');
     const inputNominal = document.getElementById('inputNominal');
-    const fieldNominal = inputNominal.querySelector('input');
+    const fieldNominal = document.getElementById('nominalInput');
 
+    // Menangani Buka Tutup Modal Box Manual
     btnBuka.addEventListener('click', () => modal.classList.add('show'));
     btnTutup.addEventListener('click', () => modal.classList.remove('show'));
 
+    // JavaScript Pintar Mengatur Tampilan Input Sesuai Pilihan Radio Button
     radioTipe.forEach(radio => {
         radio.addEventListener('change', (e) => {
             if (e.target.value === 'harian') {
                 inputNama.style.display = 'block';
+                selectMember.style.display = 'none';
+                selectPelatih.style.display = 'none';
                 inputTelepon.style.display = 'none';
                 inputNominal.style.display = 'block';
                 fieldNominal.value = '8000';
             } else if (e.target.value === 'checkin') {
-                inputNama.style.display = 'block';
+                inputNama.style.display = 'none';
+                selectMember.style.display = 'block'; // Mengubah ke dropdown pilihan member lama
+                selectPelatih.style.display = 'none';
                 inputTelepon.style.display = 'none';
                 inputNominal.style.display = 'none'; 
                 fieldNominal.value = '0';
             } else if (e.target.value === 'baru') {
                 inputNama.style.display = 'block';
+                selectMember.style.display = 'none';
+                selectPelatih.style.display = 'none';
                 inputTelepon.style.display = 'block'; 
                 inputNominal.style.display = 'block';
                 fieldNominal.value = '100000';
             } else if (e.target.value === 'perpanjang') {
-                inputNama.style.display = 'block';
+                inputNama.style.display = 'none';
+                selectMember.style.display = 'block'; // Mengubah ke dropdown pilihan member lama
+                selectPelatih.style.display = 'none';
                 inputTelepon.style.display = 'none'; 
                 inputNominal.style.display = 'block'; 
                 fieldNominal.value = '100000'; 
+            } else if (e.target.value === 'sewa_pt') {
+                inputNama.style.display = 'none';
+                selectMember.style.display = 'block'; // Dropdown member yang menyewa
+                selectPelatih.style.display = 'block'; // Dropdown pelatih yang disewa
+                inputTelepon.style.display = 'none';
+                inputNominal.style.display = 'block';
+                fieldNominal.value = '200000'; // Default tarif bulanan PT bawaan database
             }
         });
     });
