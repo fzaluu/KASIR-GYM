@@ -69,6 +69,21 @@
         cursor: pointer;
     }
 
+    .btn-excel {
+        padding: 8px 16px;
+        background-color: #10b981;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .btn-excel:hover {
+        background-color: #059669;
+    }
+
     .btn-reset {
         padding: 8px 16px;
         background-color: #64748b;
@@ -158,27 +173,37 @@
 
 @section('konten')
     <div class="filter-container">
-            <form action="{{ route('transaksi.index') }}" method="GET" class="filter-form">
-                <div class="form-group">
-                    <label>Filter Hari / Tanggal</label>
-                    <input type="date" name="tanggal" class="form-control" value="{{ request('tanggal') }}">
-                </div>
-                
-                <div class="form-group">
-                    <label>Tipe Transaksi</label>
-                    <select name="tipe_transaksi" class="form-control">
-                        <option value="">Semua Tipe</option>
-                        <option value="Harian" {{ request('tipe_transaksi') == 'Harian' ? 'selected' : '' }}>Kunjungan Harian</option>
-                        <option value="Baru" {{ request('tipe_transaksi') == 'Baru' ? 'selected' : '' }}>Member Baru</option>
-                        <option value="Perpanjang" {{ request('tipe_transaksi') == 'Perpanjang' ? 'selected' : '' }}>Perpanjang Member</option>
-                        <option value="Checkin" {{ request('tipe_transaksi') == 'Checkin' ? 'selected' : '' }}>Check-in Member</option>
-                        <option value="Sewa_pt" {{ request('tipe_transaksi') == 'Sewa_pt' ? 'selected' : '' }}>Sewa Jasa PT (Pelatih)</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn-filter">Cari Filter</button>
-                <a href="{{ route('transaksi.index') }}" class="btn-reset">Reset</a>
-            </form>
-        </div>
+        <form action="{{ route('transaksi.index') }}" method="GET" id="formFilterTransaksi" class="filter-form">
+            <div class="form-group">
+                <label>Tanggal Mulai</label>
+                <input type="date" name="tanggal_mulai" id="filterTanggalMulai" class="form-control" value="{{ request('tanggal_mulai', \Carbon\Carbon::today()->toDateString()) }}">
+            </div>
+
+            <div class="form-group">
+                <label>Tanggal Selesai</label>
+                <input type="date" name="tanggal_selesai" id="filterTanggalSelesai" class="form-control" value="{{ request('tanggal_selesai', \Carbon\Carbon::today()->toDateString()) }}">
+            </div>
+            
+            <div class="form-group">
+                <label>Tipe Transaksi</label>
+                <select name="tipe_transaksi" id="filterTipeTransaksi" class="form-control">
+                    <option value="Semua Tipe" {{ request('tipe_transaksi') == 'Semua Tipe' ? 'selected' : '' }}>Semua Tipe</option>
+                    <option value="Harian" {{ request('tipe_transaksi') == 'Harian' ? 'selected' : '' }}>Kunjungan Harian</option>
+                    <option value="Baru" {{ request('tipe_transaksi') == 'Baru' ? 'selected' : '' }}>Member Baru</option>
+                    <option value="Perpanjang" {{ request('tipe_transaksi') == 'Perpanjang' ? 'selected' : '' }}>Perpanjang Member</option>
+                    <option value="Checkin" {{ request('tipe_transaksi') == 'Checkin' ? 'selected' : '' }}>Check-in Member</option>
+                    <option value="Sewa PT" {{ request('tipe_transaksi') == 'Sewa PT' ? 'selected' : '' }}>Sewa Jasa PT (Pelatih)</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn-filter">Cari Filter</button>
+            
+            <button type="button" class="btn-excel" onclick="prosesCetakExcel()">Cetak Excel</button>
+            
+            <a href="{{ route('transaksi.index') }}" class="btn-reset">Reset</a>
+        </form>
+    </div>
+
     <div class="table-container">
         <table>
             <thead>
@@ -202,7 +227,7 @@
                                 <span class="badge badge-baru">Member Baru</span>
                             @elseif($trx->tipe_transaksi === 'Perpanjang')
                                 <span class="badge badge-perpanjang">Perpanjang Member</span>
-                            @elseif($trx->tipe_transaksi === 'Sewa_pt')
+                            @elseif($trx->tipe_transaksi === 'Sewa PT')
                                 <span class="badge badge-sewa-pt">Sewa Jasa PT</span>
                             @else
                                 <span class="badge badge-checkin">Check-in Member</span>
@@ -210,11 +235,17 @@
                         </td>
                         <td>
                             <strong>{{ $trx->nama_pelanggan }}</strong>
-                            @if($trx->tipe_transaksi === 'Sewa_pt' && $trx->pelatih)
-                                <br><small style="color: #64748b;">Pelatih: {{ $trx->pelatih->nama_pelatih }}</small>
+                            @if($trx->tipe_transaksi === 'Sewa PT' && $trx->pelatih_id)
+                                <br><small style="color: #64748b;">Pelatih: {{ $trx->pelatih->nama_pelatih ?? 'Pelatih' }}</small>
                             @endif
                         </td>
-                        <td><span style="color: #10b981; font-weight: 600;">Rp {{ number_format($trx->nominal, 0, ',', '.') }}</span></td>
+                        <td>
+                            @if($trx->nominal > 0)
+                                <span style="color: #10b981; font-weight: 600;">Rp {{ number_format($trx->nominal, 0, ',', '.') }}</span>
+                            @else
+                                <span style="color: #94a3b8; font-weight: 500;">Rp 0 (Log)</span>
+                            @endif
+                        </td>
                     </tr>
                 @empty
                     <tr>
@@ -227,3 +258,32 @@
         </table>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+    function prosesCetakExcel() {
+        // Ambil elemen filter input
+        const tglMulai = document.getElementById('filterTanggalMulai').value;
+        const tglSelesai = document.getElementById('filterTanggalSelesai').value;
+        const selectTipe = document.getElementById('filterTipeTransaksi');
+        const tipeText = selectTipe.options[selectTipe.selectedIndex].text;
+        const tipeValue = selectTipe.value;
+
+        // Racik pesan konfirmasi validasi secara dinamis sesuai pilihan admin
+        let pesanValidasi = "";
+        if (tipeValue === "Semua Tipe") {
+            pesanValidasi = `Print semua tipe transaksi?\nPeriode: ${tglMulai} s.d ${tglSelesai}\n\nKlik OK untuk konfirmasi.`;
+        } else {
+            pesanValidasi = `Print laporan ${tipeText} saja?\nPeriode: ${tglMulai} s.d ${tglSelesai}\n\nKlik OK untuk konfirmasi.`;
+        }
+
+        // Tampilkan konfirmasi pop-up interaktif
+        if (confirm(pesanValidasi)) {
+            // Jika OK, alihkan window browser ke route export excel murni bawaan controller kita
+            const urlExport = `{{ route('transaksi.export') }}?tanggal_mulai=${tglMulai}&tanggal_selesai=${tglSelesai}&tipe_transaksi=${encodeURIComponent(tipeValue)}`;
+            window.location.href = urlExport;
+        }
+        // Jika Cancel, otomatis keluar dan proses dibatalkan aman.
+    }
+</script>
+@endpush

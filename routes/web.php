@@ -53,4 +53,6 @@ Route::resource('pelatih', PelatihController::class)->only(['index', 'store', 'u
 Route::post('/pelatih/pengguna', [PelatihController::class, 'storePengguna'])->name('pelatih.storePengguna');
 Route::delete('/pelatih/pengguna/{id}', [PelatihController::class, 'destroyPengguna'])->name('pelatih.destroyPengguna');
 
+
+Route::get('/transaksi/export', [TransaksiController::class, 'export'])->name('transaksi.export');
 Route::resource('transaksi', TransaksiController::class)->only(['index', 'store']);
