@@ -71,6 +71,11 @@
             {{ session('sukses') }}
         </div>
     @endif
+   @if($errors->has('nama_pelatih'))
+    <div style="background-color: #fee2e2; color: #991b1b; padding: 16px; border-radius: 8px; font-weight: 600; border: 1px solid #fca5a5; margin-bottom: 15px;">
+        {{ $errors->first('nama_pelatih') }}
+    </div>
+@endif
 
     <div class="section-block">
         <span class="section-title">🏋️ Daftar Master Pelatih & Absensi</span>

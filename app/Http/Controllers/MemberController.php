@@ -9,9 +9,7 @@ use Carbon\Carbon;
 
 class MemberController extends Controller
 {
-    /**
-     * Tampilkan data member dengan fitur cari.
-     */
+
     public function index(Request $request)
     {
         $query = Member::query();
@@ -32,9 +30,7 @@ class MemberController extends Controller
         return view('member', compact('daftarMember', 'memberSudahCheckinHariIni'));
     }
 
-    /**
-     * Daftarkan member baru / perpanjang otomatis via form pendaftaran.
-     */
+
     public function store(Request $request)
     {
         $request->validate([
@@ -94,9 +90,7 @@ class MemberController extends Controller
         return redirect()->route('member.index')->with('sukses', 'Member baru bernama "' . $request->nama_member . '" berhasil didaftarkan!');
     }
 
-    /**
-     * Update data teks / tanggal kadaluarsa manual.
-     */
+  
     public function update(Request $request, string $id)
     {
         $request->validate([
@@ -119,9 +113,7 @@ class MemberController extends Controller
         return redirect()->route('member.index')->with('sukses', 'Data profil member berhasil diperbarui!');
     }
 
-    /**
-     * Hapus member.
-     */
+
     public function destroy(string $id)
     {
         $member = Member::findOrFail($id);
@@ -130,9 +122,7 @@ class MemberController extends Controller
         return redirect()->route('member.index')->with('sukses', 'Data keanggotaan member berhasil dihapus!');
     }
 
-    /**
-     * 🔥 FUNGSI CHECK-IN MEMBER
-     */
+  
     public function checkin(string $id)
     {
         $member = Member::findOrFail($id);
@@ -163,9 +153,6 @@ class MemberController extends Controller
         return redirect()->route('member.index')->with('sukses', 'Check-In berhasil! Selamat berlatih untuk ' . $member->nama_member);
     }
 
-    /**
-     * 🔥 FUNGSI PERPANJANG MEMBER + STRUK TRANSAKSI MASUK
-     */
     public function perpanjang(Request $request, string $id)
     {
         $request->validate([

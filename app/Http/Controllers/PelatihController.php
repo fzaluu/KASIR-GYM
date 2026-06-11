@@ -33,11 +33,14 @@ class PelatihController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nama_pelatih'  => 'required|string|max:255',
+            'nama_pelatih' => 'required|unique:pelatih,nama_pelatih',
             'nomor_telepon' => 'required|string|max:20',
             'tarif_bulanan' => 'required|numeric',
             'tarif_harian'  => 'required|numeric',
             'status_hadir'  => 'required|in:hadir,tidak_hadir',
+        ],
+        [
+           'nama_pelatih.unique' => 'Nama pelatih sudah terdaftar. Gunakan nama lain.',
         ]);
 
         Pelatih::create($request->all());
