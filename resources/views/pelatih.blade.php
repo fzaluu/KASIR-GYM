@@ -179,7 +179,7 @@
                 </div>
                 <div class="form-group">
                     <label>No. HP / WhatsApp:</label>
-                    <input type="text" name="nomor_telepon" id="nomor_telepon" required placeholder="08xxxxxxxx">
+                    <input type="text" name="nomor_telepon" id="nomor_telepon" required placeholder="08xxxxxxxx" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                 </div>
                 <div class="form-group">
                     <label>Tarif Per Sesi/Hari (Rp):</label>
@@ -214,7 +214,7 @@
                 </div>
                 <div class="form-group">
                     <label>No. HP Member:</label>
-                    <input type="text" name="nomor_telepon_pengguna" required placeholder="08xxxx">
+                    <input type="text" name="nomor_telepon_pengguna" required placeholder="08xxxx" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                 </div>
                 <div class="form-group">
                     <label>Pilih Pelatih / Trainer:</label>
@@ -254,16 +254,23 @@
     }
 
     function bukaModalEditPelatih(data) {
-        document.getElementById('titlePelatih').innerText = "Edit & Absen Pelatih";
-        document.getElementById('formPelatih').action = "/pelatih/" + data.id;
-        document.getElementById('methodFieldPelatih').innerHTML = `@method('PUT')`;
-        document.getElementById('nama_pelatih').value = data.nama_pelatih;
-        document.getElementById('nomor_telepon').value = data.nomor_telepon;
-        document.getElementById('tarif_bulanan').value = 0;
+    document.getElementById('titlePelatih').innerText = "Edit & Absen Pelatih";
+    document.getElementById('formPelatih').action = "/pelatih/" + data.id;
+    document.getElementById('methodFieldPelatih').innerHTML = `@method('PUT')`;
+    document.getElementById('nama_pelatih').value = data.nama_pelatih;
+    document.getElementById('nomor_telepon').value = data.nomor_telepon;
+    document.getElementById('tarif_bulanan').value = 0;
+    
+    // 🛡️ ANTI-MINUS FRONTEND SINKRONISASI: Menjamin data edit lama tidak membawa minus ke form browser
+    if (data.tarif_harian < 0) {
+        document.getElementById('tarif_harian').value = 20000;
+    } else {
         document.getElementById('tarif_harian').value = data.tarif_harian;
-        document.getElementById('status_hadir').value = data.status_hadir;
-        document.getElementById('btnSubmitPelatih').innerText = "PERBARUI DATA";
-        document.getElementById('modalPelatih').classList.add('show');
+    }
+    
+    document.getElementById('status_hadir').value = data.status_hadir;
+    document.getElementById('btnSubmitPelatih').innerText = "PERBARUI DATA";
+    document.getElementById('modalPelatih').classList.add('show');
     }
 
     function bukaModalPengguna() { document.getElementById('modalPengguna').classList.add('show'); }

@@ -341,7 +341,7 @@
 
                 <div class="form-group" id="inputNominal">
                     <label>Total Bayar (Rp):</label>
-                    <input type="number" name="nominal" id="nominalInput" value="8000" class="form-control" required>
+                    <input type="number" name="nominal" id="nominalInput" min="0" value="8000" class="form-control" readonly>
                 </div>
 
                 <button type="submit" class="btn-simpan">SIMPAN TRANSAKSI KASIR</button>

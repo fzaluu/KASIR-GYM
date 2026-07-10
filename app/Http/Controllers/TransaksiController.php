@@ -130,6 +130,17 @@ class TransaksiController extends Controller
 
     public function store(Request $request)
     {
+        // 🛡️ VALIDASI ANTI-MINUS & ANTI-TEKS (Mengunci nominal agar wajib integer positif)
+        $request->validate([
+            'tipe_kunjungan' => 'required|in:harian,checkin,perpanjang',
+            'nominal'        => 'required|integer|min:0', // Harus angka bulat dan minimal 0
+            'nama'           => 'required_if:tipe_kunjungan,harian|nullable|string|max:255',
+            'member_id'      => 'required_if:tipe_kunjungan,checkin,perpanjang|nullable|integer',
+        ], [
+            'nominal.integer' => 'Gagal! Nominal pembayaran harus berupa angka/integer murni.',
+            'nominal.min'     => 'Gagal! Nominal pembayaran tidak boleh bernilai minus.',
+        ]);
+
         $tipe = $request->tipe_kunjungan;
         $namaPelanggan = '';
         $memberId = null;

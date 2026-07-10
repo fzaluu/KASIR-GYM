@@ -296,7 +296,7 @@
 
                 <div class="form-group">
                     <label>Nominal Bayar (Rp):</label>
-                    <input type="number" name="nominal" id="inputNominal" value="8000" required>
+                    <input type="number" name="nominal" id="inputNominal" min="0" value="8000" readonly>
                 </div>
 
                 <button type="submit" class="btn-simpan" id="btnSubmitForm">SIMPAN DATA</button>
@@ -372,15 +372,22 @@
     }
 
     function bukaModalEdit(data) {
-        modalTitle.innerText = "Edit Data Pengunjung";
-        form.action = "/harian/" + data.id;
-        methodField.innerHTML = `@method('PUT')`;
-        
-        inputNama.value = data.nama_pelanggan;
+    modalTitle.innerText = "Edit Data Pengunjung";
+    form.action = "/harian/" + data.id;
+    methodField.innerHTML = `@method('PUT')`;
+    
+    inputNama.value = data.nama_pelanggan;
+    
+    // 🛡️ ANTI-MINUS FRONTEND: Jika data lama minus, otomatis reset ke 0 atau 8000 saat di-edit
+    if (data.nominal < 0) {
+        inputNominal.value = "8000"; 
+    } else {
         inputNominal.value = data.nominal;
-        btnSubmit.innerText = "PERBARUI DATA";
-        
-        modal.classList.add('show');
+    }
+    
+    btnSubmit.innerText = "PERBARUI DATA";
+    
+    modal.classList.add('show');
     }
 
     function tutupModal() {

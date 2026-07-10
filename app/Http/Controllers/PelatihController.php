@@ -13,12 +13,10 @@ class PelatihController extends Controller
     {
         $cari = $request->input('cari');
 
-        // Ambil data pelatih dengan fitur pencarian nama
         $daftarPelatih = Pelatih::when($cari, function($query) use ($cari) {
             return $query->where('nama_pelatih', 'like', '%'.$cari.'%');
         })->get();
 
-        // Solusi Revisi Poin 5: Ambil data pengguna pelatih dengan fitur pencarian nama pelanggan PT
         $daftarPengguna = PenggunaPelatih::with('pelatih')
             ->when($cari, function($query) use ($cari) {
                 return $query->where('nama_pengguna', 'like', '%'.$cari.'%');
@@ -32,15 +30,17 @@ class PelatihController extends Controller
 
     public function store(Request $request)
     {
+        // 🛡️ VALIDASI ANTI-MINUS TAMBAH PELATIH
         $request->validate([
-            'nama_pelatih' => 'required|unique:pelatih,nama_pelatih',
+            'nama_pelatih'  => 'required|unique:pelatih,nama_pelatih',
             'nomor_telepon' => 'required|string|max:20',
-            'tarif_bulanan' => 'required|numeric',
-            'tarif_harian'  => 'required|numeric',
+            'tarif_bulanan' => 'required|integer|min:0',
+            'tarif_harian'  => 'required|integer|min:0', // Wajib angka bulat positif
             'status_hadir'  => 'required|in:hadir,tidak_hadir',
-        ],
-        [
-           'nama_pelatih.unique' => 'Nama pelatih sudah terdaftar. Gunakan nama lain.',
+        ], [
+            'nama_pelatih.unique' => 'Nama pelatih sudah terdaftar. Gunakan nama lain.',
+            'tarif_harian.integer'=> 'Gagal! Tarif harian harus berupa angka bulat.',
+            'tarif_harian.min'    => 'Gagal! Tarif harian tidak boleh bernilai minus.',
         ]);
 
         Pelatih::create($request->all());
@@ -50,20 +50,23 @@ class PelatihController extends Controller
 
     public function update(Request $request, string $id)
     {
+        // 🛡️ VALIDASI ANTI-MINUS UPDATE PELATIH
         $request->validate([
             'nama_pelatih'  => 'required|string|max:255',
             'nomor_telepon' => 'required|string|max:20',
-            'tarif_bulanan' => 'required|numeric',
-            'tarif_harian'  => 'required|numeric',
+            'tarif_bulanan' => 'required|integer|min:0',
+            'tarif_harian'  => 'required|integer|min:0', // Wajib angka bulat positif
             'status_hadir'  => 'required|in:hadir,tidak_hadir',
+        ], [
+            'tarif_harian.integer'=> 'Gagal! Tarif harian harus berupa angka bulat.',
+            'tarif_harian.min'    => 'Gagal! Tarif harian tidak boleh bernilai minus.',
         ]);
 
         $pelatih = Pelatih::findOrFail($id);
         $pelatih->update($request->all());
 
-        // Solusi Poin 4: Otomatis sinkronkan nama pelatih terbaru di tabel transaksi kas masuk hari ini jika ada edit nama master
         Transaksi::where('pelatih_id', $pelatih->id)->update([
-            'nama_pelanggan' => $request->nama_pelatih // Menjaga konsistensi data riwayat
+            'nama_pelanggan' => $request->nama_pelatih
         ]);
 
         return redirect()->route('pelatih.index')->with('sukses', 'Data profil pelatih berhasil diperbarui.');
@@ -74,28 +77,28 @@ class PelatihController extends Controller
         Pelatih::destroy($id);
         return redirect()->route('pelatih.index')->with('sukses', 'Data pelatih berhasil dihapus.');
     }
-
-    // --- FUNGSI KHUSUS UNTUK MENANGANI DATA SEWA PENGGUNA ---
     
     public function storePengguna(Request $request)
     {
+        // 🛡️ VALIDASI ANTI-MINUS TRANSAKSI SEWA PT
         $request->validate([
             'nama_pengguna'           => 'required|string|max:255',
             'nomor_telepon_pengguna'  => 'required|string|max:20',
             'pelatih_id'              => 'required|exists:pelatih,id',
             'tipe_jasa'               => 'required|in:perbulan,perhari',
-            'tarif_jasa'              => 'required|numeric',
+            'tarif_jasa'              => 'required|integer|min:0', // Mengunci nominal sewa
+        ], [
+            'tarif_jasa.integer'      => 'Gagal! Tarif sewa harus berupa angka bulat murni.',
+            'tarif_jasa.min'          => 'Gagal! Tarif sewa tidak boleh bernilai minus.',
         ]);
 
-        // 1. Simpan ke tabel pengguna pelatih
         $pengguna = PenggunaPelatih::create($request->all());
 
-        // 2. MASUK KE CATATAN TRANSAKSI DENGAN STRUKTUR BAKU (Solusi Poin 6, 8, 9 & 11)
         Transaksi::create([
-            'pelatih_id'     => $request->pelatih_id, // Menyimpan ID Relasi Logis Pelatih
+            'pelatih_id'     => $request->pelatih_id,
             'nama_pelanggan' => $request->nama_pengguna,
             'nomor_telepon'  => $request->nomor_telepon_pengguna,
-            'tipe_transaksi' => 'Sewa_pt', // Disamakan total dengan dashboard utama
+            'tipe_transaksi' => 'Sewa_pt',
             'nominal'        => $request->tarif_jasa,
         ]);
 

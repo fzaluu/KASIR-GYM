@@ -33,10 +33,14 @@ class MemberController extends Controller
 
     public function store(Request $request)
     {
+        // 🛡️ VALIDASI ANTI-MINUS & ANTI-TEKS MEMBER BARU
         $request->validate([
             'nama_member'   => 'required|string|max:255',
             'nomor_telepon' => 'required|string|max:20',
-            'nominal'       => 'required|numeric',
+            'nominal'       => 'required|integer|min:0', // Wajib integer positif
+        ], [
+            'nominal.integer' => 'Gagal! Nominal pembayaran harus berupa angka bulat murni.',
+            'nominal.min'     => 'Gagal! Nominal pembayaran tidak boleh bernilai minus.',
         ]);
 
         $cekNomorSama = Member::where('nomor_telepon', $request->nomor_telepon)->first();
@@ -155,8 +159,12 @@ class MemberController extends Controller
 
     public function perpanjang(Request $request, string $id)
     {
+        // 🛡️ VALIDASI ANTI-MINUS & ANTI-TEKS PERPANJANG MEMBER
         $request->validate([
-            'nominal' => 'required|numeric',
+            'nominal' => 'required|integer|min:0', // Wajib integer positif
+        ], [
+            'nominal.integer' => 'Gagal! Nominal perpanjang harus berupa angka bulat murni.',
+            'nominal.min'     => 'Gagal! Nominal perpanjang tidak boleh bernilai minus.',
         ]);
 
         $member = Member::findOrFail($id);

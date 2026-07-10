@@ -287,12 +287,12 @@
 
                 <div class="form-group" id="groupTelepon">
                     <label>No. HP / WhatsApp:</label>
-                    <input type="text" name="nomor_telepon" id="inputTelepon" placeholder="Contoh: 08123xxxx" required>
+                    <input type="text" name="nomor_telepon" id="inputTelepon" placeholder="Contoh: 08123xxxx" required oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                 </div>
 
                 <div class="form-group" id="groupNominal">
                     <label id="labelNominal">Nominal Pembayaran Awal (Rp):</label>
-                    <input type="number" name="nominal" id="inputNominal" value="100000" required>
+                    <input type="number" name="nominal" id="inputNominal" min="0" value="100000" readonly>
                 </div>
 
                 <div class="form-group" id="groupKadaluarsa" style="display: none;">
@@ -424,33 +424,39 @@
     }
 
     function bukaModalPerpanjang(data) {
-        modalTitle.innerText = "Perpanjang Masa Aktif Bulanan";
-        form.action = "/member/perpanjang/" + data.id;
-        methodField.innerHTML = "";
-        btnSubmit.innerText = "KONFIRMASI PERPANJANG";
-        btnSubmit.style.backgroundColor = "#38bdf8";
+    modalTitle.innerText = "Perpanjang Masa Aktif Bulanan";
+    form.action = "/member/perpanjang/" + data.id;
+    methodField.innerHTML = "";
+    btnSubmit.innerText = "KONFIRMASI PERPANJANG";
+    btnSubmit.style.backgroundColor = "#38bdf8";
 
-        groupNama.style.display = "none";
-        groupTelepon.style.display = "none";
-        groupKadaluarsa.style.display = "none";
-        
-        groupNominal.style.display = "block";
-        labelNominal.innerText = "Biaya Perpanjang Bulanan (Rp):";
-        
-        infoBoxPerpanjang.style.display = "block";
-        infoBoxPerpanjang.innerHTML = `
-            👤 <strong>Member:</strong> ${data.nama_member} <br>
-            📞 <strong>No. Telp:</strong> ${data.nomor_telepon} <br>
-            📅 <strong>Masa Aktif Sekarang:</strong> ${data.tanggal_kadaluarsa}
-        `;
-        
-        infoBoxSistem.innerHTML = "⚙️ <strong>Sistem Otomatis:</strong> Eksekusi tombol ini akan memperpanjang masa expired member selama <strong>+30 Hari</strong> secara akumulatif, serta otomatis mencatatkan uang masuk ke laporan kas keuangan!";
+    groupNama.style.display = "none";
+    groupTelepon.style.display = "none";
+    groupKadaluarsa.style.display = "none";
+    
+    groupNominal.style.display = "block";
+    labelNominal.innerText = "Biaya Perpanjang Bulanan (Rp):";
+    
+    infoBoxPerpanjang.style.display = "block";
+    infoBoxPerpanjang.innerHTML = `
+        👤 <strong>Member:</strong> ${data.nama_member} <br>
+        📞 <strong>No. Telp:</strong> ${data.nomor_telepon} <br>
+        📅 <strong>Masa Aktif Sekarang:</strong> ${data.tanggal_kadaluarsa}
+    `;
+    
+    infoBoxSistem.innerHTML = "⚙️ <strong>Sistem Otomatis:</strong> Eksekusi tombol ini akan memperpanjang masa expired member selama <strong>+30 Hari</strong> secara akumulatif, serta otomatis mencatatkan uang masuk ke laporan kas keuangan!";
 
-        inputNama.required = false;
-        inputTelepon.required = false;
+    inputNama.required = false;
+    inputTelepon.required = false;
+
+    // 🛡️ ANTI-MINUS FRONTEND SINKRONISASI
+    if (data.nominal < 0) {
         inputNominal.value = "100000";
+    } else {
+        inputNominal.value = "100000"; // Dikunci default bulanan aman
+    }
 
-        modal.classList.add('show');
+    modal.classList.add('show');
     }
 
     function tutupModal() {
