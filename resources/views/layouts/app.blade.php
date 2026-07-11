@@ -31,14 +31,6 @@
             position: fixed;
             left: 0;
             top: 0;
-            
-        }
-
-        .brand-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center; 
-            margin-bottom: 5px;
         }
 
         .sidebar-logo {
@@ -55,7 +47,6 @@
             letter-spacing: 1.5px;
             text-align: center;
             font-weight: 700;
-
             margin-bottom: 30px; 
         }
 
@@ -73,7 +64,6 @@
             border-radius: 8px;
             font-weight: 500;
             transition: all 0.2s;
-            
         }
 
         .menu-links a.active, .menu-links a:hover {
@@ -147,7 +137,6 @@
             color: #fff;
         }
 
-       
         .panah-icon {
             display: inline-block;
             transition: transform 0.3s ease;
@@ -155,12 +144,10 @@
             font-size: 10px;
         }
 
-        /* Ketika dropdown terbuka, panah berputar menghadap ke bawah */
         .mobile-nav.open .panah-icon {
             transform: rotate(0deg);
         }
 
-        /* Wadah Anak Menu Dropdown Mobile */
         .mobile-dropdown-content {
             max-height: 0;
             overflow: hidden;
@@ -170,7 +157,7 @@
             left: 0;
             width: 100%;
             box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-            transition: max-height 0.3s ease-out; /* Animasi slide down naik-turun smooth */
+            transition: max-height 0.3s ease-out;
         }
 
         .mobile-dropdown-content a {
@@ -188,16 +175,14 @@
             font-weight: 600;
         }
 
-        /* Ketika wrapper open, slide kebawah */
         .mobile-nav.open .mobile-dropdown-content {
-            max-height: 200px; /* Batasi tinggi maksimal menu dropdown mobile */
+            max-height: 200px;
         }
 
-        /* WADAH AREA KONTEN UTAMA */
         .main-content {
             flex: 1;
             padding: 40px;
-            margin-left: 260px; /* Memberi ruang agar tidak tertutup sidebar kiri desktop */
+            margin-left: 260px;
             display: flex;
             flex-direction: column;
             gap: 24px;
@@ -219,15 +204,18 @@
             color: #0f172a;
         }
 
-        /* 📱 RESPONSIVE BREAKPOINT (LAYAR HP) */
+        /* TAMBAHAN KITA UNTUK LOGOUT */
+        .admin-area { display: flex; align-items: center; gap: 15px; }
+        .logout-btn { background: #dc2626; color: #fff; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+
         @media screen and (max-width: 768px) {
             body { flex-direction: column; }
-            .sidebar-kiri { display: none; } /* Sembunyikan sidebar kiri di HP */
-            .mobile-nav { display: flex; }  /* Tampilkan topbar di HP */
+            .sidebar-kiri { display: none; }
+            .mobile-nav { display: flex; }
             .main-content { 
                 margin-left: 0; 
                 padding: 20px; 
-                margin-top: 60px; /* Beri jarak atas agar konten tidak ketutupan mobile topbar */
+                margin-top: 60px;
                 width: 100%;
             }
             .header { flex-direction: column; align-items: flex-start; gap: 5px; }
@@ -260,16 +248,13 @@
         <div class="mobile-brand">
             <img src="{{ asset('img/gym.png') }}" alt="Logo" class="mobile-logo">
             <h2>VIRGO GYM</h2>
-            
         </div>
 
         <div class="mobile-menu-links">
             <a href="{{ url('/') }}" class="{{ Request::is('/') ? 'active' : '' }}">Dashboard</a>
-            
             <button class="mobile-dropdown-btn {{ Request::is('harian*') || Request::is('member*') || Request::is('pelatih*') ? 'active' : '' }}" onclick="toggleMobileDropdown()">
                 Pengguna <span class="panah-icon">▲</span>
             </button>
-            
             <a href="{{ route('transaksi.index') }}" class="{{ Request::is('transaksi*') ? 'active' : '' }}">Transaksi</a>
         </div>
 
@@ -283,7 +268,16 @@
     <div class="main-content">
         <div class="header">
             <h1>@yield('page_title')</h1>
-            <span>Admin: <strong>FRAZA</strong></span>
+            
+            @auth
+            <div class="admin-area">
+                <span>Admin: <strong>{{ Auth::user()->name }}</strong></span>
+                <form action="{{ route('logout') }}" method="POST">
+                    @csrf
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+            @endauth
         </div>
 
         @yield('konten')
@@ -291,12 +285,9 @@
 
     <script>
         function toggleMobileDropdown() {
-            // Toggle class 'open' pada wrapper mobile nav
-            // CSS akan otomatis menganimasikan rotasi panah & tinggi dropdown secara smooth
             document.getElementById('mobileNavWrapper').classList.toggle('open');
         }
 
-        // Tutup otomatis dropdown mobile jika admin tidak sengaja mengklik area di luar navbar
         window.onclick = function(event) {
             if (!event.target.matches('.mobile-dropdown-btn') && !event.target.matches('.panah-icon')) {
                 var wrapper = document.getElementById('mobileNavWrapper');
