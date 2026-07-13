@@ -232,16 +232,20 @@
         <h2>VIRGO GYM</h2>
         
         <div class="menu-links">
-            <a href="{{ url('/') }}" class="{{ Request::is('/') ? 'active' : '' }}">Dashboard</a>
-            
-            <div class="menu-kategori">Manajemen Pengguna</div>
-            <a href="{{ route('harian.index') }}" class="{{ Request::is('harian*') ? 'active' : '' }}">Pengunjung Harian</a>
-            <a href="{{ route('member.index') }}" class="{{ Request::is('member*') ? 'active' : '' }}">Data Member</a>
+        <a href="{{ url('/') }}" class="{{ Request::is('/') ? 'active' : '' }}">Dashboard</a>
+        
+        <div class="menu-kategori">Manajemen Pengguna</div>
+        <a href="{{ route('harian.index') }}" class="{{ Request::is('harian*') ? 'active' : '' }}">Pengunjung Harian</a>
+        <a href="{{ route('member.index') }}" class="{{ Request::is('member*') ? 'active' : '' }}">Data Member</a>
+        
+        {{-- MULAI GERBANG ADMIN --}}
+        @if(Auth::check() && Auth::user()->role == 'admin')
             <a href="{{ route('pelatih.index') }}" class="{{ Request::is('pelatih*') ? 'active' : '' }}">Data Pelatih</a>
-            
             <div class="menu-kategori">Keuangan</div>
             <a href="{{ route('transaksi.index') }}" class="{{ Request::is('transaksi*') ? 'active' : '' }}">Catatan Transaksi</a>
-        </div>
+        @endif
+        {{-- SELESAI GERBANG ADMIN --}}
+    </div>
     </div>
 
     <div class="mobile-nav" id="mobileNavWrapper">
@@ -271,6 +275,9 @@
             
             @auth
             <div class="admin-area">
+                <div style="background: yellow; padding: 10px; color: black; font-weight: bold;">
+    Status Role User: {{ Auth::check() ? Auth::user()->role : 'Tidak Login' }}
+</div>
                 <span>Admin: <strong>{{ Auth::user()->name }}</strong></span>
                 <form action="{{ route('logout') }}" method="POST">
                     @csrf

@@ -1,9 +1,9 @@
-@extends('layouts.app')
+@extends('layouts.auth')
 
 @section('title', 'Login - Virgo Gym')
 @section('page_title', 'Halaman Login')
 
-@section('konten')
+@section('konten_login')
 <style>
     .login-container {
         display: flex;
