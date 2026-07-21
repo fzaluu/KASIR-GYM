@@ -319,6 +319,8 @@
     const methodField = document.getElementById('methodField');
     const btnSubmit = document.getElementById('btnSubmitForm');
     
+    const hargaDefaultBulanan = {{ $hargaBulanan }};
+
     const groupNama = document.getElementById('groupNama');
     const groupTelepon = document.getElementById('groupTelepon');
     const groupNominal = document.getElementById('groupNominal');
@@ -393,7 +395,7 @@
 
         inputNama.value = "";
         inputTelepon.value = "";
-        inputNominal.value = "100000";
+        inputNominal.value = hargaDefaultBulanan; // Default bulanan aman
         inputNama.required = true;
         inputTelepon.required = true;
 
@@ -451,9 +453,9 @@
 
     // 🛡️ ANTI-MINUS FRONTEND SINKRONISASI
     if (data.nominal < 0) {
-        inputNominal.value = "100000";
+        inputNominal.value = "" + Math.abs(data.nominal); // Tampilkan nominal minus sebagai positif
     } else {
-        inputNominal.value = "100000"; // Dikunci default bulanan aman
+        inputNominal.value = hargaDefaultBulanan; // Dikunci default bulanan aman
     }
 
     modal.classList.add('show');

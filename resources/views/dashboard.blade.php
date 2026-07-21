@@ -12,6 +12,44 @@
         margin-bottom: 25px;
     }
 
+    .rekap-container {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 5px;
+        flex-wrap: wrap;
+    }
+
+    .kartu-rekap {
+        background: #fff;
+        padding: 20px;
+        border-radius: 10px;
+        flex: 1;
+        min-width: 220px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+
+    .kartu-rekap h3 {
+        font-size: 14px;
+        color: #64748b;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .kartu-rekap .angka {
+        font-size: 28px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .kartu-rekap .trend-naik {
+        font-size: 12px;
+        color: #10b981;
+        font-weight: 600;
+        margin-top: 5px;
+    }
+
     .card {
         background-color: #fff;
         padding: 24px;
@@ -225,7 +263,25 @@
             {{ session('gagal') }}
         </div>
     @endif
-
+    @if(Auth::user()->role == 'admin')
+    <div class="rekap-container">
+        <div class="kartu-rekap">
+            <h3>Pengunjung Hari Ini</h3>
+            <div class="angka">{{ $totalHariIni ?? 0 }} Orang</div>
+            <div class="trend-naik">📅 Tanggal: {{ date('d M Y') }}</div>
+        </div>
+        <div class="kartu-rekap">
+            <h3>Pengunjung Kemarin</h3>
+            <div class="angka">{{ $totalKemarin ?? 0 }} Orang</div>
+            <div class="trend-naik" style="color: #64748b;">
+                @if(($totalHariIni ?? 0) >= ($totalKemarin ?? 0))
+                    📈 Meningkat dari kemarin!
+                @else
+                    📉 Lebih sepi dari kemarin
+                @endif
+            </div>
+        </div>
+    </div>
     <div class="stats-grid">
         <div class="card">
             <h3>Total Pelatih</h3>
@@ -240,10 +296,12 @@
             <p>Rp {{ number_format($totalpemasukan, 0, ',', '.') }}</p>
         </div>
     </div>
-
+    @endif 
+    @if(Auth::user()->role == 'kasir')
     <div class="action-area">
         <button class="btn-aksi" id="btnBukaModal">[+] TRANSAKSI BARU / CHECK-IN</button>
     </div>
+    @endif
 
     <div class="table-container">
         <h3>Log Aktivitas Hari Ini</h3>
@@ -302,50 +360,54 @@
             </div>
             
            <form action="{{ route('transaksi.store') }}" method="POST">
-                @csrf
-                <div class="form-group">
-                    <label>Pilihan Aksi:</label>
-                    <div class="radio-grid">
-                        <label><input type="radio" name="tipe_kunjungan" value="harian" checked> Kunjungan Harian</label>
-                        <label><input type="radio" name="tipe_kunjungan" value="checkin"> Check-in Member Tetap</label>
-                        <label><input type="radio" name="tipe_kunjungan" value="perpanjang"> Perpanjang Member Gym</label>
-                    </div>
-                </div>
+    @csrf
+    <div class="form-group">
+        <label>Pilihan Aksi:</label>
+        <div class="radio-grid">
+            @foreach($hargaPaket as $hp)
+                <label>
+                    <input type="radio" name="tipe_kunjungan" value="{{ $hp->nama_paket }}" data-harga="{{ $hp->harga }}" 
+                    {{ $loop->first ? 'checked' : '' }}> 
+                    {{ ucfirst($hp->nama_paket) }}
+                </label>
+            @endforeach
+        </div>
+    </div>
 
-                <div class="form-group" id="inputNama">
-                    <label>Nama Pengunjung Harian:</label>
-                    <input type="text" name="nama" class="form-control" placeholder="Masukkan nama pengunjung harian...">
-                </div>
+    <div class="form-group" id="inputNama">
+        <label>Nama Pengunjung Harian:</label>
+        <input type="text" name="nama" class="form-control" placeholder="Masukkan nama...">
+    </div>
 
-                <div class="form-group" id="selectMemberCheckin" style="display: none;">
-                    <label>Pilih Nama Member (Hanya Member Aktif):</label>
-                    <select name="member_id" id="memberIdCheckin" class="form-control">
-                        <option value="">-- Pilih Member Aktif --</option>
-                        @foreach($daftarMember as $member)
-                            @if(!in_array($member->id, $idSudahCheckin))
-                                <option value="{{ $member->id }}">{{ $member->nama_member }} ({{ $member->nomor_telepon }})</option>
-                            @endif
-                        @endforeach
-                    </select>
-                </div>
+    <div class="form-group" id="selectMemberCheckin" style="display: none;">
+        <label>Pilih Nama Member (Aktif):</label>
+        <select name="member_id" id="memberIdCheckin" class="form-control" disabled>
+            <option value="">-- Pilih Member --</option>
+            @foreach($daftarMember as $member)
+                @if(!in_array($member->id, $idSudahCheckin))
+                    <option value="{{ $member->id }}">{{ $member->nama_member }}</option>
+                @endif
+            @endforeach
+        </select>
+    </div>
 
-                <div class="form-group" id="selectMemberPerpanjang" style="display: none;">
-                    <label>Pilih Nama Member:</label>
-                    <select name="member_id" id="memberIdPerpanjang" class="form-control" disabled>
-                        <option value="">-- Pilih Member --</option>
-                        @foreach($daftarMemberSemua as $member)
-                            <option value="{{ $member->id }}">{{ $member->nama_member }} ({{ $member->nomor_telepon }})</option>
-                        @endforeach
-                    </select>
-                </div>
+    <div class="form-group" id="selectMemberPerpanjang" style="display: none;">
+        <label>Pilih Nama Member:</label>
+        <select name="member_id" id="memberIdPerpanjang" class="form-control" disabled>
+            <option value="">-- Pilih Member --</option>
+            @foreach($daftarMemberSemua as $member)
+                <option value="{{ $member->id }}">{{ $member->nama_member }}</option>
+            @endforeach
+        </select>
+    </div>
 
-                <div class="form-group" id="inputNominal">
-                    <label>Total Bayar (Rp):</label>
-                    <input type="number" name="nominal" id="nominalInput" min="0" value="8000" class="form-control" readonly>
-                </div>
+    <div class="form-group" id="inputNominal">
+        <label>Total Bayar (Rp):</label>
+        <input type="number" name="nominal" id="nominalInput" class="form-control" readonly>
+    </div>
 
-                <button type="submit" class="btn-simpan">SIMPAN TRANSAKSI KASIR</button>
-            </form>
+    <button type="submit" class="btn-simpan">SIMPAN TRANSAKSI KASIR</button>
+</form>
         </div>
     </div>
 @endsection
@@ -368,29 +430,36 @@
     btnBuka.addEventListener('click', () => modal.classList.add('show'));
     btnTutup.addEventListener('click', () => modal.classList.remove('show'));
 
-    radioTipe.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            inputNama.style.display = 'none';
-            selectMemberCheckin.style.display = 'none';
-            selectMemberPerpanjang.style.display = 'none';
-            memberIdCheckin.disabled = true;
-            memberIdPerpanjang.disabled = true;
-            inputNominal.style.display = 'block';
+    // GANTI ISI SCRIPT DI DALAM radioTipe.forEach DENGAN INI:
+radioTipe.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+        // Ambil harga dari database yang dikirim ke radio button
+        fieldNominal.value = e.target.getAttribute('data-harga');
 
-            if (e.target.value === 'harian') {
-                inputNama.style.display = 'block';
-                fieldNominal.value = '8000';
-            } else if (e.target.value === 'checkin') {
-                selectMemberCheckin.style.display = 'block';
-                memberIdCheckin.disabled = false;
-                inputNominal.style.display = 'none';
-                fieldNominal.value = '0';
-            } else if (e.target.value === 'perpanjang') {
-                selectMemberPerpanjang.style.display = 'block';
-                memberIdPerpanjang.disabled = false;
-                fieldNominal.value = '100000';
-            }
-        });
+        // Reset tampilan
+        inputNama.style.display = 'none';
+        selectMemberCheckin.style.display = 'none';
+        selectMemberPerpanjang.style.display = 'none';
+        memberIdCheckin.disabled = true;
+        memberIdPerpanjang.disabled = true;
+        inputNominal.style.display = 'block';
+
+        // Logika Tampil Field
+        if (e.target.value === 'harian') {
+            inputNama.style.display = 'block';
+        } else if (e.target.value === 'checkin') {
+            selectMemberCheckin.style.display = 'block';
+            memberIdCheckin.disabled = false;
+            inputNominal.style.display = 'none'; // Checkin biasanya gratis
+        } else if (e.target.value === 'perpanjang') {
+            selectMemberPerpanjang.style.display = 'block';
+            memberIdPerpanjang.disabled = false;
+        }
     });
+});
+
+// Tambahan: Set harga saat modal pertama kali dibuka
+const firstRadio = document.querySelector('input[name="tipe_kunjungan"]:checked');
+if(firstRadio) fieldNominal.value = firstRadio.getAttribute('data-harga');
 </script>
 @endpush

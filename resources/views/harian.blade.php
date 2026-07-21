@@ -5,44 +5,6 @@
 
 @push('styles')
 <style>
-    .rekap-container {
-        display: flex;
-        gap: 20px;
-        margin-bottom: 5px;
-        flex-wrap: wrap;
-    }
-
-    .kartu-rekap {
-        background: #fff;
-        padding: 20px;
-        border-radius: 10px;
-        flex: 1;
-        min-width: 220px;
-        border: 1px solid #e2e8f0;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    }
-
-    .kartu-rekap h3 {
-        font-size: 14px;
-        color: #64748b;
-        margin-bottom: 8px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .kartu-rekap .angka {
-        font-size: 28px;
-        font-weight: 700;
-        color: #0f172a;
-    }
-
-    .kartu-rekap .trend-naik {
-        font-size: 12px;
-        color: #10b981;
-        font-weight: 600;
-        margin-top: 5px;
-    }
-
     .top-bar {
         display: flex;
         justify-content: space-between;
@@ -206,25 +168,13 @@
             {{ session('sukses') }}
         </div>
     @endif
+    @if(session('gagal'))
+        <div style="background-color: #fee2e2; color: #7f1d1d; padding: 16px; border-radius: 8px; font-weight: 600; border: 1px solid #fecaca; margin-bottom: 15px;">
+            {{ session('gagal') }}
+        </div>
+    @endif
 
-    <div class="rekap-container">
-        <div class="kartu-rekap">
-            <h3>Pengunjung Hari Ini</h3>
-            <div class="angka">{{ $totalHariIni ?? 0 }} Orang</div>
-            <div class="trend-naik">📅 Tanggal: {{ date('d M Y') }}</div>
-        </div>
-        <div class="kartu-rekap">
-            <h3>Pengunjung Kemarin</h3>
-            <div class="angka">{{ $totalKemarin ?? 0 }} Orang</div>
-            <div class="trend-naik" style="color: #64748b;">
-                @if(($totalHariIni ?? 0) >= ($totalKemarin ?? 0))
-                    📈 Meningkat dari kemarin!
-                @else
-                    📉 Lebih sepi dari kemarin
-                @endif
-            </div>
-        </div>
-    </div>
+
 
     <div class="top-bar">
         <button class="btn-tambah" onclick="bukaModalTambah()">[+] INPUT PENGUNJUNG HARIAN</button>
@@ -312,86 +262,42 @@
     const form = document.getElementById('formHarian');
     const modalTitle = document.getElementById('modalTitle');
     const methodField = document.getElementById('methodField');
-    const btnSubmit = document.getElementById('btnSubmitForm');
-
     const inputNama = document.getElementById('inputNama');
     const inputNominal = document.getElementById('inputNominal');
-
-    const inputCari = document.getElementById('inputCariHarian');
-    const tabelBody = document.getElementById('tabelBodyHarian');
-
-    inputCari.addEventListener('keyup', function() {
-        const keyword = inputCari.value.toLowerCase();
-        const rows = tabelBody.getElementsByClassName('baris-harian');
-        let ditemukan = false;
-
-        for (let i = 0; i < rows.length; i++) {
-            const cellNama = rows[i].getElementsByClassName('nama-target')[0];
-            if (cellNama) {
-                const teksNama = cellNama.textContent || cellNama.innerText;
-                if (teksNama.toLowerCase().indexOf(keyword) > -1) {
-                    rows[i].style.display = "";
-                    ditemukan = true;
-                } else {
-                    rows[i].style.display = "none";
-                }
-            }
-        }
-
-        const pesanLama = document.getElementById('pesanKosongCari');
-        if (pesanLama) pesanLama.remove();
-
-        const bawaanKosong = document.getElementById('barisKosongBawaan');
-        if (bawaanKosong) {
-            if (keyword !== '') {
-                bawaanKosong.style.display = "none";
-            } else if (rows.length === 0) {
-                bawaanKosong.style.display = "";
-                ditemukan = true;
-            }
-        }
-
-        if (!ditemukan && rows.length > 0) {
-            const tr = document.createElement('tr');
-            tr.id = 'pesanKosongCari';
-            tr.innerHTML = `<td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">Tidak ada pengunjung harian dengan kata kunci "${inputCari.value}"</td>`;
-            tabelBody.appendChild(tr);
-        }
-    });
+    const btnSubmit = document.getElementById('btnSubmitForm');
+    
+    // Harga dari database (dikirim dari Controller)
+    const hargaDefault = {{ $hargaHarian ?? 8000 }};
 
     function bukaModalTambah() {
-        modalTitle.innerText = "Input Pengunjung Harian Baru";
+        modalTitle.innerText = "Input Pengunjung Harian";
         form.action = "{{ route('harian.store') }}";
         methodField.innerHTML = "";
-        
         inputNama.value = "";
-        inputNominal.value = "8000";
-        btnSubmit.innerText = "INPUT KUNJUNGAN";
-        
+        inputNominal.value = hargaDefault; 
         modal.classList.add('show');
     }
 
     function bukaModalEdit(data) {
-    modalTitle.innerText = "Edit Data Pengunjung";
-    form.action = "/harian/" + data.id;
-    methodField.innerHTML = `@method('PUT')`;
-    
-    inputNama.value = data.nama_pelanggan;
-    
-    // 🛡️ ANTI-MINUS FRONTEND: Jika data lama minus, otomatis reset ke 0 atau 8000 saat di-edit
-    if (data.nominal < 0) {
-        inputNominal.value = "8000"; 
-    } else {
-        inputNominal.value = data.nominal;
-    }
-    
-    btnSubmit.innerText = "PERBARUI DATA";
-    
-    modal.classList.add('show');
+        modalTitle.innerText = "Edit Data Pengunjung";
+        form.action = "/harian/" + data.id;
+        methodField.innerHTML = `@method('PUT')`;
+        inputNama.value = data.nama_pelanggan;
+        inputNominal.value = hargaDefault;
+        modal.classList.add('show');
     }
 
-    function tutupModal() {
-        modal.classList.remove('show');
-    }
+    function tutupModal() { modal.classList.remove('show'); }
+
+    // SCRIPT PENCARIAN (Bawaan Anda)
+    const inputCari = document.getElementById('inputCariHarian');
+    inputCari.addEventListener('keyup', function() {
+        const keyword = inputCari.value.toLowerCase();
+        const rows = document.getElementsByClassName('baris-harian');
+        for (let i = 0; i < rows.length; i++) {
+            const nama = rows[i].querySelector('.nama-target').innerText.toLowerCase();
+            rows[i].style.display = nama.includes(keyword) ? "" : "none";
+        }
+    });
 </script>
 @endpush

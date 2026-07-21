@@ -128,83 +128,90 @@ class TransaksiController extends Controller
         exit;
     }
 
-    public function store(Request $request)
-    {
-        // 🛡️ VALIDASI ANTI-MINUS & ANTI-TEKS (Mengunci nominal agar wajib integer positif)
-        $request->validate([
-            'tipe_kunjungan' => 'required|in:harian,checkin,perpanjang',
-            'nominal'        => 'required|integer|min:0', // Harus angka bulat dan minimal 0
-            'nama'           => 'required_if:tipe_kunjungan,harian|nullable|string|max:255',
-            'member_id'      => 'required_if:tipe_kunjungan,checkin,perpanjang|nullable|integer',
-        ], [
-            'nominal.integer' => 'Gagal! Nominal pembayaran harus berupa angka/integer murni.',
-            'nominal.min'     => 'Gagal! Nominal pembayaran tidak boleh bernilai minus.',
-        ]);
+   public function store(Request $request)
+{
+    // 🛡️ VALIDASI AWAL
+    $request->validate([
+        'tipe_kunjungan' => 'required|in:harian,checkin,perpanjang',
+        'nominal'        => 'required|integer|min:0',
+        'nama'           => 'required_if:tipe_kunjungan,harian|nullable|string|max:255',
+        'member_id'      => 'required_if:tipe_kunjungan,checkin,perpanjang|nullable|integer',
+    ]);
 
-        $tipe = $request->tipe_kunjungan;
-        $namaPelanggan = '';
-        $memberId = null;
-        $pelatihId = null;
-        $tipeTransaksiBaku = ''; 
+    $tipe = $request->tipe_kunjungan;
+    $namaPelanggan = '';
+    $memberId = null;
+    $pelatihId = null;
+    $tipeTransaksiBaku = ''; 
 
-        // Validasi Alur Inputan Dashboard Terpilih (Murni Harian, Check-In, Perpanjang)
-        if ($tipe === 'harian') {
-            $namaPelanggan = $request->nama;
-            $tipeTransaksiBaku = 'Harian';
-        } elseif ($tipe === 'checkin' || $tipe === 'perpanjang') {
-            $member = Member::find($request->member_id);
-            if (!$member) {
-                return redirect()->back()->with('gagal', 'Data member wajib dipilih!');
-            }
-            $namaPelanggan = $member->nama_member;
-            $memberId = $member->id;
-
-            if ($tipe === 'checkin') {
-                $tipeTransaksiBaku = 'Checkin';
-                
-                // 🚫 Cek Validasi Expired
-                if (Carbon::parse($member->tanggal_kadaluarsa)->isPast()) {
-                    return redirect()->back()->with('gagal', 'Gagal Check-In! Masa aktif member ' . $namaPelanggan . ' sudah habis/expired. Silakan lakukan Perpanjang Member terlebih dahulu!');
-                }
-
-                // 🛠️ Solusi Anti-Cheat Double Check-in
-                $sudahCheckin = Transaksi::where('member_id', $memberId)
-                                         ->where('tipe_transaksi', 'Checkin')
-                                         ->whereDate('created_at', Carbon::today())
-                                         ->exists();
-                if ($sudahCheckin) {
-                    return redirect()->back()->with('gagal', 'Gagal! Member bernama ' . $namaPelanggan . ' sudah melakukan check-in hari ini!');
-                }
-
-                // 🔥 TRIGGER UTAMA: Tambah total gym (+1)
-                $member->increment('total_checkin');
-
-            } else {
-                $tipeTransaksiBaku = 'Perpanjang';
-
-                // 🔥 TRIGGER UTAMA: Tambah masa aktif +30 hari
-                $expiredLama = Carbon::parse($member->tanggal_kadaluarsa);
-                if ($expiredLama->isPast()) {
-                    $expiredBaru = Carbon::today()->addDays(30);
-                } else {
-                    $expiredBaru = $expiredLama->addDays(30);
-                }
-
-                $member->update([
-                    'tanggal_kadaluarsa' => $expiredBaru
-                ]);
-            }
+    // --- LOGIKA PENGECEKAN DUPLIKAT (VALIDASI 2X) ---
+    
+    // 1. Jika Harian, cek berdasarkan nama & tipe harian hari ini
+    if ($tipe === 'harian') {
+        $sudahInputHarian = Transaksi::where('nama_pelanggan', $request->nama)
+                                     ->where('tipe_transaksi', 'Harian')
+                                     ->whereDate('created_at', Carbon::today())
+                                     ->exists();
+        if ($sudahInputHarian) {
+            return redirect()->back()->with('gagal', 'Gagal! Nama ' . $request->nama . ' sudah melakukan transaksi harian hari ini.');
         }
+        $namaPelanggan = $request->nama;
+        $tipeTransaksiBaku = 'Harian';
+    } 
+    // 2. Jika Check-in atau Perpanjang, sudah ada pengecekan member_id di bawah
+    elseif ($tipe === 'checkin' || $tipe === 'perpanjang') {
+        $member = Member::find($request->member_id);
+        if (!$member) {
+            return redirect()->back()->with('gagal', 'Data member wajib dipilih!');
+        }
+        $namaPelanggan = $member->nama_member;
+        $memberId = $member->id;
 
-        // Simpan Transaksi Keuangan Resmi Kasir Keuangan Dashboard
-        Transaksi::create([
-            'tipe_transaksi' => $tipeTransaksiBaku, 
-            'member_id'      => $memberId,
-            'pelatih_id'     => $pelatihId,
-            'nama_pelanggan' => $namaPelanggan,
-            'nominal'        => $request->nominal ?? 0,
-        ]);
+        if ($tipe === 'checkin') {
+            $tipeTransaksiBaku = 'Checkin';
+            
+            // Validasi Expired
+            if (Carbon::parse($member->tanggal_kadaluarsa)->isPast()) {
+                return redirect()->back()->with('gagal', 'Gagal! Masa aktif member sudah habis.');
+            }
 
-        return redirect()->back()->with('sukses', 'Data pengunjung harian berhasil dicatat.');
+            // Validasi Duplikat Check-in (Sudah ada di kodinganmu)
+            $sudahCheckin = Transaksi::where('member_id', $memberId)
+                                     ->where('tipe_transaksi', 'Checkin')
+                                     ->whereDate('created_at', Carbon::today())
+                                     ->exists();
+            if ($sudahCheckin) {
+                return redirect()->back()->with('gagal', 'Gagal! Member ' . $namaPelanggan . ' sudah check-in hari ini!');
+            }
+            $member->increment('total_checkin');
+
+        } else {
+            $tipeTransaksiBaku = 'Perpanjang';
+            
+            // Validasi Duplikat Perpanjang (Opsional: Jika ingin mencegah perpanjang 2x di hari yg sama)
+            $sudahPerpanjang = Transaksi::where('member_id', $memberId)
+                                        ->where('tipe_transaksi', 'Perpanjang')
+                                        ->whereDate('created_at', Carbon::today())
+                                        ->exists();
+            if ($sudahPerpanjang) {
+                return redirect()->back()->with('gagal', 'Gagal! Member ' . $namaPelanggan . ' sudah melakukan perpanjang hari ini.');
+            }
+
+            $expiredLama = Carbon::parse($member->tanggal_kadaluarsa);
+            $expiredBaru = $expiredLama->isPast() ? Carbon::today()->addDays(30) : $expiredLama->addDays(30);
+            $member->update(['tanggal_kadaluarsa' => $expiredBaru]);
+        }
     }
+
+    // Simpan Transaksi
+    Transaksi::create([
+        'tipe_transaksi' => $tipeTransaksiBaku, 
+        'member_id'      => $memberId,
+        'pelatih_id'     => $pelatihId,
+        'nama_pelanggan' => $namaPelanggan,
+        'nominal'        => $request->nominal ?? 0,
+    ]);
+
+    return redirect()->back()->with('sukses', 'Data berhasil dicatat.');
+}
 }

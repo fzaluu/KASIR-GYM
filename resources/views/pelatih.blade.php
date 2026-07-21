@@ -76,12 +76,15 @@
         {{ $errors->first('nama_pelatih') }}
     </div>
 @endif
-
-    <div class="section-block">
-        <span class="section-title">🏋️ Daftar Master Pelatih & Absensi</span>
+<div class="section-block">
+    @if(Auth::user()->role == 'kasir')
+    <span class="section-title">Pelatih & Absensi</span>
+    @endif
+    @if(Auth::user()->role == 'admin')
+    <span class="section-title"> Daftar Pelatih</span>
         <button class="btn-tambah" onclick="bukaModalPelatih()">[+] TAMBAH DATA PELATIH</button>
+    @endif
     </div>
-    
     <div class="table-container">
         <table>
             <thead>
@@ -107,6 +110,7 @@
                         </span>
                     </td>
                     <td>
+                        
                         <button style="background-color: #f59e0b; color: white; border: none; padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 12px;" data-pelatih="{{ json_encode($row) }}" onclick="bukaModalEditPelatih(JSON.parse(this.getAttribute('data-pelatih')))">Edit/Absen</button>
                         <form action="{{ route('pelatih.destroy', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Hapus data pelatih ini?')">
                             @csrf @method('DELETE')
@@ -120,9 +124,10 @@
             </tbody>
         </table>
     </div>
-
+    
+    @if(Auth::user()->role == 'kasir')
     <div class="section-block">
-        <span class="section-title">👥 Catatan Member Sewa Jasa Pelatih (PT)</span>
+        <span class="section-title">Catatan Member Sewa Jasa Pelatih (PT)</span>
         <button class="btn-tambah-user" onclick="bukaModalPengguna()">[+] DAFTARKAN SEWA PELATIH</button>
     </div>
 
@@ -157,11 +162,11 @@
                 </tr>
                 @empty
                 <tr><td colspan="7" style="text-align: center; color: #94a3b8;">Belum ada member yang menyewa pelatih hari ini.</td></tr>
-                @endforelse
+                  @endforelse
             </tbody>
         </table>
     </div>
-
+    @endif
     <div class="modal-overlay" id="modalPelatih">
         <div class="modal-box">
             <div class="modal-header">
@@ -171,26 +176,29 @@
             <form id="formPelatih" action="" method="POST">
                 @csrf <div id="methodFieldPelatih"></div>
                 
-                <input type="hidden" name="tarif_bulanan" id="tarif_bulanan" value="0">
+                <input type="hidden" name="tarif_bulanan" id="tarif_bulanan" min="0" value="0">
 
                 <div class="form-group">
                     <label>Nama Lengkap Pelatih:</label>
-                    <input type="text" name="nama_pelatih" id="nama_pelatih" required placeholder="Masukkan nama trainer...">
+                    <input type="text" name="nama_pelatih" id="nama_pelatih" required placeholder="Masukkan nama pelatih...">
                 </div>
                 <div class="form-group">
                     <label>No. HP / WhatsApp:</label>
                     <input type="text" name="nomor_telepon" id="nomor_telepon" required placeholder="08xxxxxxxx" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                 </div>
+                
                 <div class="form-group">
                     <label>Tarif Per Sesi/Hari (Rp):</label>
-                    <input type="number" name="tarif_harian" id="tarif_harian" value="20000" required>
+                    <input type="number" name="tarif_harian" id="tarif_harian" min="0" value="20000" required>
                 </div>
                 <div class="form-group">
+                    
                     <label>Status Kehadiran Hari Ini:</label>
                     <select name="status_hadir" id="status_hadir">
                         <option value="hadir">Hadir & Bisa Melatih</option>
                         <option value="tidak_hadir">Tidak Hadir / Libur</option>
                     </select>
+                    
                 </div>
                 <button type="submit" style="width:100%; padding:12px; border-radius:8px; border:none; background-color:#38bdf8; color:white; font-weight:600; cursor:pointer;" id="btnSubmitPelatih">SIMPAN</button>
             </form>
@@ -209,15 +217,15 @@
                 <input type="hidden" name="tipe_jasa" value="perhari">
 
                 <div class="form-group">
-                    <label>Nama Member (Pengguna):</label>
+                    <label>Nama Pengguna:</label>
                     <input type="text" name="nama_pengguna" required placeholder="Nama member...">
                 </div>
                 <div class="form-group">
-                    <label>No. HP Member:</label>
+                    <label>No. HP Pengguna:</label>
                     <input type="text" name="nomor_telepon_pengguna" required placeholder="08xxxx" oninput="this.value = this.value.replace(/[^0-9]/g, '');">
                 </div>
                 <div class="form-group">
-                    <label>Pilih Pelatih / Trainer:</label>
+                    <label>Pilih Pelatih:</label>
                     <select name="pelatih_id" id="selectPelatih" onchange="hitungTarifOtomatis()" required>
                         <option value="">-- Pilih Pelatih --</option>
                         @foreach($daftarPelatih as $p)
@@ -228,7 +236,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Tarif Jasa Per Sesi (Terkunci Otomatis):</label>
+                    <label>Tarif Jasa Per Sesi:</label>
                     <input type="number" name="tarif_jasa" id="tarifTerkunci" readonly required>
                 </div>
                 <button type="submit" style="width:100%; padding:12px; border-radius:8px; border:none; background-color:#10b981; color:white; font-weight:600; cursor:pointer;">PROSES SEWA</button>

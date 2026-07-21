@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Member;
 use App\Models\Transaksi;
+use App\Models\HargaPaket;
 use Carbon\Carbon;
 
 class MemberController extends Controller
@@ -21,13 +22,16 @@ class MemberController extends Controller
 
         $daftarMember = $query->orderBy('nama_member', 'asc')->get();
 
+        $hargaBulanan = HargaPaket::where('nama_paket', 'member')->first()->harga ?? 10000;
+
         // Ambil semua ID member yang SUDAH check-in hari ini untuk mengunci tombol di view
         $memberSudahCheckinHariIni = Transaksi::where('tipe_transaksi', 'Checkin')
                                               ->whereDate('created_at', Carbon::today())
                                               ->pluck('member_id')
                                               ->toArray();
 
-        return view('member', compact('daftarMember', 'memberSudahCheckinHariIni'));
+        
+        return view('member', compact('daftarMember', 'memberSudahCheckinHariIni', 'hargaBulanan'));
     }
 
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Transaksi;
+use App\Models\HargaPaket;
 use Carbon\Carbon;
 
 class HarianController extends Controller
@@ -12,14 +13,9 @@ class HarianController extends Controller
     public function index(Request $request)
     {
         $tanggalTerpilih = $request->input('tanggal', Carbon::today()->toDateString());
-
-        $totalHariIni = Transaksi::where('tipe_transaksi', 'Harian')
-                                 ->whereDate('created_at', Carbon::today())
-                                 ->count();
-
-        $totalKemarin = Transaksi::where('tipe_transaksi', 'Harian')
-                                 ->whereDate('created_at', Carbon::yesterday())
-                                 ->count();
+        
+        // Ambil harga dari tabel harga_pakets agar selalu update
+        $hargaHarian = HargaPaket::where('nama_paket', 'harian')->first()->harga ?? 8000;
 
         $query = Transaksi::where('tipe_transaksi', 'Harian');
 
@@ -31,19 +27,26 @@ class HarianController extends Controller
 
         $daftarHarian = $query->orderBy('created_at', 'desc')->get();
 
-        return view('harian', compact('daftarHarian', 'totalHariIni', 'totalKemarin', 'tanggalTerpilih'));
+        // Kirim $hargaHarian ke view
+        return view('harian', compact('daftarHarian', 'tanggalTerpilih', 'hargaHarian'));
     }
 
     public function store(Request $request)
     {
-        // 🛡️ VALIDASI ANTI-MINUS & ANTI-TEKS KETIKA TAMBAH DATA
         $request->validate([
             'nama_pelanggan' => 'required|string|max:255',
-            'nominal'        => 'required|integer|min:0', // Mengunci angka bulat positif
-        ], [
-            'nominal.integer' => 'Gagal! Nominal harus berupa angka bulat murni.',
-            'nominal.min'     => 'Gagal! Nominal tidak boleh bernilai minus.',
+            'nominal'        => 'required|integer|min:0',
         ]);
+
+        // 🛡️ VALIDASI ANTI DUPLIKAT (2x Input)
+        $sudahAda = Transaksi::where('nama_pelanggan', $request->nama_pelanggan)
+            ->where('tipe_transaksi', 'Harian')
+            ->whereDate('created_at', Carbon::today())
+            ->exists();
+
+        if ($sudahAda) {
+            return redirect()->route('harian.index')->with('gagal', 'Gagal! ' . $request->nama_pelanggan . ' sudah terinput hari ini.');
+        }
 
         Transaksi::create([
             'nama_pelanggan' => $request->nama_pelanggan,
