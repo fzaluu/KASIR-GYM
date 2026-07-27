@@ -254,7 +254,6 @@
         document.getElementById('methodFieldPelatih').innerHTML = "";
         document.getElementById('nama_pelatih').value = "";
         document.getElementById('nomor_telepon').value = "";
-        document.getElementById('tarif_bulanan').value = 0;
         document.getElementById('tarif_harian').value = 20000;
         document.getElementById('status_hadir').value = "hadir";
         document.getElementById('btnSubmitPelatih').innerText = "SIMPAN DATA";
@@ -262,6 +261,7 @@
     }
 
     function bukaModalEditPelatih(data) {
+    @if(Auth::check() && Auth::user()->role == 'kasir')
     document.getElementById('titlePelatih').innerText = "Edit & Absen Pelatih";
     document.getElementById('formPelatih').action = "/pelatih/" + data.id;
     document.getElementById('methodFieldPelatih').innerHTML = `@method('PUT')`;
@@ -275,7 +275,7 @@
     } else {
         document.getElementById('tarif_harian').value = data.tarif_harian;
     }
-    
+    @endif
     document.getElementById('status_hadir').value = data.status_hadir;
     document.getElementById('btnSubmitPelatih').innerText = "PERBARUI DATA";
     document.getElementById('modalPelatih').classList.add('show');

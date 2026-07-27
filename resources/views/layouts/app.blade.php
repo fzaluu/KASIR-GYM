@@ -248,6 +248,8 @@
             <div class="menu-kategori">Keuangan</div>
             <a href="{{ route('transaksi.index') }}" class="{{ Request::is('transaksi*') ? 'active' : '' }}">Catatan Transaksi</a>
         @endif
+
+        
     </div>
     </div>
 
@@ -279,9 +281,10 @@
             @auth
             <div class="admin-area">
                 <div style="background: yellow; padding: 10px; color: black; font-weight: bold;">
-    Status Role User: {{ Auth::check() ? Auth::user()->role : 'Tidak Login' }}
-</div>
-                <span><strong>{{ Auth::user()->name }}</strong></span>
+                Status Role User: {{ Auth::check() ? Auth::user()->role : 'Tidak Login' }}
+            </div>
+               <span><strong>{{ Auth::user()->name }}</strong></span>
+
                 <form action="{{ route('logout') }}" method="POST">
                     @csrf
                     <button type="submit" class="logout-btn">Logout</button>
