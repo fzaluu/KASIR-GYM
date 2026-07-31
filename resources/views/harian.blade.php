@@ -11,6 +11,7 @@
         align-items: center;
         gap: 15px;
         flex-wrap: wrap;
+        margin-bottom: 20px; /* Menambah jarak bawah agar tidak rapat dengan tabel */
     }
 
     .btn-tambah {
@@ -40,6 +41,7 @@
         font-size: 14px;
         outline: none;
         background-color: #fff;
+        color: #0f172a;
     }
     .input-filter:focus { border-color: #38bdf8; }
 
@@ -73,6 +75,7 @@
         padding: 14px 16px;
         border-bottom: 1px solid #e2e8f0;
         font-size: 14px;
+        color: #0f172a;
     }
 
     th {
@@ -97,6 +100,7 @@
         cursor: pointer;
         font-size: 12px;
         font-weight: 600;
+        transition: background-color 0.2s;
     }
     .btn-edit:hover { background-color: #d97706; }
 
@@ -109,8 +113,61 @@
         cursor: pointer;
         font-size: 12px;
         font-weight: 600;
+        transition: background-color 0.2s;
     }
     .btn-hapus:hover { background-color: #dc2626; }
+
+    /* Notifikasi Mengambang di Pojok Kanan Atas */
+    .notif-popup {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        max-width: 450px;
+        padding: 16px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        animation: slideInRight 0.3s ease-out forwards;
+    }
+
+    .notif-sukses {
+        background-color: #d1fae5;
+        color: #065f46;
+        border: 1px solid #a7f3d0;
+    }
+
+    .notif-gagal {
+        background-color: #fee2e2;
+        color: #7f1d1d;
+        border: 1px solid #fecaca;
+    }
+
+    .notif-close {
+        background: none;
+        border: none;
+        font-size: 18px;
+        cursor: pointer;
+        color: inherit;
+        opacity: 0.7;
+        margin-left: 15px;
+    }
+    .notif-close:hover { opacity: 1; }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
 
     .modal-overlay {
         position: fixed;
@@ -141,12 +198,13 @@
 
     .form-group { margin-bottom: 16px; }
     .form-group label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; color: #334155; }
-    .form-group input { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; }
+    .form-group input { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; color: #0f172a; box-sizing: border-box; background-color: #fff; }
     .form-group input:focus { border-color: #38bdf8; }
 
     .btn-simpan {
         width: 100%; background-color: #38bdf8; color: white; border: none;
         padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px;
+        transition: background-color 0.2s;
     }
     .btn-simpan:hover { background-color: #0ea5e9; }
 
@@ -157,24 +215,29 @@
         .btn-filter { width: 100%; text-align: center; }
         .table-container { padding: 12px; overflow-x: auto; }
         table { min-width: 550px; }
+        .modal-box { width: 90%; padding: 20px; }
+        .notif-popup { left: 20px; right: 20px; max-width: none; }
     }
 </style>
 @endpush
 
 @section('konten')
 
+    {{-- Notifikasi Sukses Mengambang di Pojok Kanan Atas --}}
     @if(session('sukses'))
-        <div style="background-color: #d1fae5; color: #065f46; padding: 16px; border-radius: 8px; font-weight: 600; border: 1px solid #a7f3d0; margin-bottom: 15px;">
-            {{ session('sukses') }}
+        <div id="notifAlert" class="notif-popup notif-sukses">
+            <span>{{ session('sukses') }}</span>
+            <button class="notif-close" onclick="tutupNotif()">&times;</button>
         </div>
     @endif
+
+    {{-- Notifikasi Gagal/Error Mengambang di Pojok Kanan Atas --}}
     @if(session('gagal'))
-        <div style="background-color: #fee2e2; color: #7f1d1d; padding: 16px; border-radius: 8px; font-weight: 600; border: 1px solid #fecaca; margin-bottom: 15px;">
-            {{ session('gagal') }}
+        <div id="notifAlert" class="notif-popup notif-gagal">
+            <span>{{ session('gagal') }}</span>
+            <button class="notif-close" onclick="tutupNotif()">&times;</button>
         </div>
     @endif
-
-
 
     <div class="top-bar">
         <button class="btn-tambah" onclick="bukaModalTambah()">[+] INPUT PENGUNJUNG HARIAN</button>
@@ -289,15 +352,36 @@
 
     function tutupModal() { modal.classList.remove('show'); }
 
-    // SCRIPT PENCARIAN (Bawaan Anda)
-    const inputCari = document.getElementById('inputCariHarian');
-    inputCari.addEventListener('keyup', function() {
-        const keyword = inputCari.value.toLowerCase();
-        const rows = document.getElementsByClassName('baris-harian');
-        for (let i = 0; i < rows.length; i++) {
-            const nama = rows[i].querySelector('.nama-target').innerText.toLowerCase();
-            rows[i].style.display = nama.includes(keyword) ? "" : "none";
+    // Fungsi Tutup Notif Manual & Otomatis Hilang Setelah 4 Detik
+    function tutupNotif() {
+        const notif = document.getElementById('notifAlert');
+        if (notif) {
+            notif.style.opacity = '0';
+            notif.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => notif.remove(), 300);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const notif = document.getElementById('notifAlert');
+        if (notif) {
+            setTimeout(() => {
+                tutupNotif();
+            }, 4000);
         }
     });
+
+    // SCRIPT PENCARIAN
+    const inputCari = document.getElementById('inputCariHarian');
+    if(inputCari) {
+        inputCari.addEventListener('keyup', function() {
+            const keyword = inputCari.value.toLowerCase();
+            const rows = document.getElementsByClassName('baris-harian');
+            for (let i = 0; i < rows.length; i++) {
+                const nama = rows[i].querySelector('.nama-target').innerText.toLowerCase();
+                rows[i].style.display = nama.includes(keyword) ? "" : "none";
+            }
+        });
+    }
 </script>
 @endpush

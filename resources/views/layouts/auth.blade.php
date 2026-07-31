@@ -4,9 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Virgo Gym</title>
+    <link rel="icon" type="image/x-icon" href="{{ asset('img/2.png') }}">
+
     <style>
-        body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #1e293b; }
-        .login-box { width: 100%; max-width: 400px; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        body { 
+            margin: 0; 
+            padding: 0;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            background: linear-gradient(135deg, #0f172a, #1e3a8a, #0ea5e9);
+        }
+        .login-box { 
+            width: 100%; 
+            /* Hapus background putih, box-shadow, dan padding bawaan agar tidak dobel */
+            background: transparent !important; 
+            box-shadow: none !important; 
+            padding: 0; 
+        }
     </style>
 </head>
 <body>

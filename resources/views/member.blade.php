@@ -43,36 +43,27 @@
     }
     .input-filter:focus { border-color: #38bdf8; }
 
-    .btn-filter {
-        background-color: #475569;
-        color: white;
-        border: none;
-        padding: 10px 16px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 14px;
-    }
-    .btn-filter:hover { background-color: #334155; }
-
     .table-container {
         background-color: #fff;
         padding: 24px;
         border-radius: 10px;
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
         border: 1px solid #e2e8f0;
+        overflow-x: auto;
     }
 
     table {
         width: 100%;
         border-collapse: collapse;
         text-align: left;
+        min-width: 950px;
     }
 
     th, td {
         padding: 14px 16px;
         border-bottom: 1px solid #e2e8f0;
         font-size: 14px;
+        vertical-align: middle;
     }
 
     th {
@@ -164,11 +155,6 @@
         margin-bottom: 15px;
         line-height: 1.5;
     }
-
-    @media screen and (max-width: 1024px) {
-        .table-container { padding: 12px; overflow-x: auto; }
-        table { min-width: 850px; }
-    }
 </style>
 @endpush
 
@@ -186,8 +172,14 @@
         </div>
     @endif
 
-    <div class="top-bar">
-        <button class="btn-tambah" onclick="bukaModalTambah()">[+] DAFTARKAN MEMBER BARU VIA FORM</button>
+    <div class="top-bar" style="margin-bottom: 20px;">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn-tambah" onclick="bukaModalTambah()">[+] DAFTARKAN MEMBER BARU VIA FORM</button>
+            
+            <a href="{{ route('checkin.scanner') }}" style="background-color: #4f46e5; color: #fff; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2); transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#4338ca'" onmouseout="this.style.backgroundColor='#4f46e5'">
+                📷 Buka Scanner Kamera Check-In
+            </a>
+        </div>
         
         <div class="filter-box">
             <form action="{{ route('member.index') }}" method="GET" onsubmit="return false;">
@@ -200,13 +192,14 @@
         <table>
             <thead>
                 <tr>
-                    <th>No</th>
+                    <th style="width: 50px;">No</th>
                     <th>Nama Member</th>
                     <th>No. Telepon</th>
                     <th>Masa Aktif Berakhir</th>
                     <th>Status / Sisa Hari</th>
-                    <th>Total Gym (Check-in)</th>
-                    <th>Aksi Khusus Kasir</th>
+                    <th style="text-align: center;">Total Check-in</th>
+                    <th style="text-align: center;">QR Code</th>
+                    <th style="text-align: center;">Aksi Khusus Kasir</th>
                 </tr>
             </thead>
             <tbody id="tabelBodyMember">
@@ -215,6 +208,9 @@
                     $tanggalSekarang = \Carbon\Carbon::today();
                     $tanggalExpired = \Carbon\Carbon::parse($row->tanggal_kadaluarsa);
                     $sisaHari = $tanggalSekarang->diffInDays($tanggalExpired, false);
+                    
+                    // Keamanan: Enkripsi ID agar QR code berisi token acak yang aman dan tidak mudah ditebak
+                    $tokenQrAman = Crypt::encryptString($row->id);
                 @endphp
                 <tr class="baris-member">
                     <td>{{ $index + 1 }}</td>
@@ -228,9 +224,22 @@
                             <span class="badge badge-habis">🔴 Habis (Lewat {{ abs($sisaHari) }} Hari)</span>
                         @endif
                     </td>
-                    <td><span style="font-weight: 700; color: #475569;">🔑 {{ $row->total_checkin ?? 0 }} x</span></td>
-                    <td>
-                        <div class="action-btns">
+                    <td style="text-align: center;"><span style="font-weight: 700; color: #475569;">🔑 {{ $row->total_checkin ?? 0 }} x</span></td>
+                    
+                    <td style="text-align: center;">
+                        <!-- QR Code di-generate menggunakan data token enkripsi yang aman -->
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($tokenQrAman) }}" 
+                            alt="QR Code Member" 
+                            style="width: 50px; height: 50px; margin: 0 auto; border-radius: 4px; background: white; padding: 2px; border: 1px solid #cbd5e1; cursor: pointer; transition: transform 0.2s;" 
+                            title="Klik untuk memperbesar QR Code"
+                            onmouseover="this.style.transform='scale(1.08)'" 
+                            onmouseout="this.style.transform='scale(1)'"
+                            onclick="bukaModalQr('{{ $tokenQrAman }}', '{{ $row->nama_member }}', '{{ $row->id }}')">
+                        <div style="font-size: 10px; color: #64748b; margin-top: 2px; font-weight: 600;">ID: {{ $row->id }}</div>
+                    </td>
+
+                    <td style="text-align: center;">
+                        <div class="action-btns" style="justify-content: center;">
                             @if($sisaHari >= 0)
                                 @if(in_array($row->id, $memberSudahCheckinHariIni ?? []))
                                     <button class="btn-action btn-checkin" style="background-color: #cbd5e1; color: #94a3b8; cursor: not-allowed;" title="Member ini sudah melakukan check-in hari ini!" disabled>Sudah Check-In</button>
@@ -258,7 +267,7 @@
                 </tr>
                 @empty
                 <tr id="barisKosongBawaanMember">
-                    <td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">
+                    <td colspan="8" style="text-align: center; color: #94a3b8; padding: 20px;">
                         Belum ada data member terdaftar di database.
                     </td>
                 </tr>
@@ -267,6 +276,26 @@
         </table>
     </div>
 
+    <!-- MODAL POPUP LIHAT & DOWNLOAD QR CODE -->
+    <div class="modal-overlay" id="modalQrCode">
+        <div class="modal-box" style="text-align: center; width: 380px;">
+            <div class="modal-header">
+                <h2 id="qrModalTitle">QR Code Member</h2>
+                <button class="btn-close" onclick="tutupModalQr()">&times;</button>
+            </div>
+            
+            <div style="margin: 20px 0;">
+                <img id="qrImagePreview" src="" alt="QR Code Besar" style="width: 200px; height: 200px; margin: 0 auto; border-radius: 8px; border: 1px solid #cbd5e1; padding: 8px; background: white;">
+                <p id="qrModalSubtitle" style="font-size: 13px; color: #64748b; margin-top: 10px; font-weight: 600;"></p>
+            </div>
+
+            <button type="button" onclick="downloadQrCode()" class="btn-simpan" style="background-color: #4f46e5; margin-top: 5px;">
+                📥 Download QR Code
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL TAMBAH / EDIT MEMBER -->
     <div class="modal-overlay" id="modalMember">
         <div class="modal-box">
             <div class="modal-header">
@@ -338,6 +367,53 @@
     const inputCari = document.getElementById('inputCariMember');
     const tabelBody = document.getElementById('tabelBodyMember');
 
+    const modalQrCode = document.getElementById('modalQrCode');
+    const qrImagePreview = document.getElementById('qrImagePreview');
+    const qrModalTitle = document.getElementById('qrModalTitle');
+    const qrModalSubtitle = document.getElementById('qrModalSubtitle');
+    
+    let currentNamaFileQr = "QRCode.png";
+
+    function bukaModalQr(tokenEnc, namaMember, idMember) {
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(tokenEnc)}`;
+        
+        qrModalTitle.innerText = "QR Code: " + namaMember;
+        qrModalSubtitle.innerText = "ID Member: " + idMember;
+        qrImagePreview.src = qrUrl;
+        
+        currentNamaFileQr = `QRCode-${namaMember.replace(/\s+/g, '_')}.png`;
+        modalQrCode.classList.add('show');
+    }
+
+    function downloadQrCode() {
+        const imageUrl = qrImagePreview.src;
+        fetch(imageUrl)
+            .then(response => response.blob())
+            .then(blob => {
+                const blobUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = currentNamaFileQr;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(blobUrl);
+            })
+            .catch(err => {
+                window.open(imageUrl, '_blank');
+            });
+    }
+
+    function tutupModalQr() {
+        modalQrCode.classList.remove('show');
+    }
+
+    window.addEventListener('click', function(event) {
+        if (event.target === modalQrCode) {
+            tutupModalQr();
+        }
+    });
+
     inputCari.addEventListener('keyup', function() {
         const keyword = inputCari.value.toLowerCase();
         const rows = tabelBody.getElementsByClassName('baris-member');
@@ -372,7 +448,7 @@
         if (!ditemukan && rows.length > 0) {
             const tr = document.createElement('tr');
             tr.id = 'pesanKosongCariMember';
-            tr.innerHTML = `<td colspan="7" style="text-align: center; color: #94a3b8; padding: 20px;">Tidak ada data member dengan kata kunci "${inputCari.value}"</td>`;
+            tr.innerHTML = `<td colspan="8" style="text-align: center; color: #94a3b8; padding: 20px;">Tidak ada data member dengan kata kunci "${inputCari.value}"</td>`;
             tabelBody.appendChild(tr);
         }
     });
@@ -395,7 +471,7 @@
 
         inputNama.value = "";
         inputTelepon.value = "";
-        inputNominal.value = hargaDefaultBulanan; // Default bulanan aman
+        inputNominal.value = hargaDefaultBulanan;
         inputNama.required = true;
         inputTelepon.required = true;
 
@@ -426,39 +502,38 @@
     }
 
     function bukaModalPerpanjang(data) {
-    modalTitle.innerText = "Perpanjang Masa Aktif Bulanan";
-    form.action = "/member/perpanjang/" + data.id;
-    methodField.innerHTML = "";
-    btnSubmit.innerText = "KONFIRMASI PERPANJANG";
-    btnSubmit.style.backgroundColor = "#38bdf8";
+        modalTitle.innerText = "Perpanjang Masa Aktif Bulanan";
+        form.action = "/member/perpanjang/" + data.id;
+        methodField.innerHTML = "";
+        btnSubmit.innerText = "KONFIRMASI PERPANJANG";
+        btnSubmit.style.backgroundColor = "#38bdf8";
 
-    groupNama.style.display = "none";
-    groupTelepon.style.display = "none";
-    groupKadaluarsa.style.display = "none";
-    
-    groupNominal.style.display = "block";
-    labelNominal.innerText = "Biaya Perpanjang Bulanan (Rp):";
-    
-    infoBoxPerpanjang.style.display = "block";
-    infoBoxPerpanjang.innerHTML = `
-        👤 <strong>Member:</strong> ${data.nama_member} <br>
-        📞 <strong>No. Telp:</strong> ${data.nomor_telepon} <br>
-        📅 <strong>Masa Aktif Sekarang:</strong> ${data.tanggal_kadaluarsa}
-    `;
-    
-    infoBoxSistem.innerHTML = "⚙️ <strong>Sistem Otomatis:</strong> Eksekusi tombol ini akan memperpanjang masa expired member selama <strong>+30 Hari</strong> secara akumulatif, serta otomatis mencatatkan uang masuk ke laporan kas keuangan!";
+        groupNama.style.display = "none";
+        groupTelepon.style.display = "none";
+        groupKadaluarsa.style.display = "none";
+        
+        groupNominal.style.display = "block";
+        labelNominal.innerText = "Biaya Perpanjang Bulanan (Rp):";
+        
+        infoBoxPerpanjang.style.display = "block";
+        infoBoxPerpanjang.innerHTML = `
+            👤 <strong>Member:</strong> ${data.nama_member} <br>
+            📞 <strong>No. Telp:</strong> ${data.nomor_telepon} <br>
+            📅 <strong>Masa Aktif Sekarang:</strong> ${data.tanggal_kadaluarsa}
+        `;
+        
+        infoBoxSistem.innerHTML = "⚙️ <strong>Sistem Otomatis:</strong> Eksekusi tombol ini akan memperpanjang masa expired member selama <strong>+30 Hari</strong> secara akumulatif, serta otomatis mencatatkan uang masuk ke laporan kas keuangan!";
 
-    inputNama.required = false;
-    inputTelepon.required = false;
+        inputNama.required = false;
+        inputTelepon.required = false;
 
-    // 🛡️ ANTI-MINUS FRONTEND SINKRONISASI
-    if (data.nominal < 0) {
-        inputNominal.value = "" + Math.abs(data.nominal); // Tampilkan nominal minus sebagai positif
-    } else {
-        inputNominal.value = hargaDefaultBulanan; // Dikunci default bulanan aman
-    }
+        if (data.nominal < 0) {
+            inputNominal.value = "" + Math.abs(data.nominal);
+        } else {
+            inputNominal.value = hargaDefaultBulanan;
+        }
 
-    modal.classList.add('show');
+        modal.classList.add('show');
     }
 
     function tutupModal() {
