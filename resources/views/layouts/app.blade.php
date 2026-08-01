@@ -240,6 +240,26 @@
             .header { flex-direction: column; align-items: flex-start; gap: 5px; }
             .header h1 { font-size: 20px; }
         }
+        /* Page Loader & Toast */
+        #page-loader {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(6px);
+            z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: #ffffff; opacity: 0; visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        #page-loader.show { opacity: 1; visibility: visible; }
+
+        .spinner-ring {
+            width: 3rem; height: 3rem; border: 3px solid rgba(255,255,255,0.2);
+            border-top-color: #fff; border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 
     @stack('styles')
@@ -320,6 +340,12 @@
         @endauth
     </div>
 
+    <!-- Global Loading Overlay -->
+    <div id="page-loader">
+        <div class="spinner-ring mb-3"></div>
+        <div class="fw-medium text-light small tracking-wide">Yeah buddy! Lightweight, baby!</div>
+    </div>
+
     <!-- NAVBAR MOBILE -->
     <div class="mobile-nav" id="mobileNavWrapper">
         <div class="mobile-brand">
@@ -372,6 +398,27 @@
                 }
             }
         }
+        // Page Loader on Link & Form Submit
+        document.addEventListener("DOMContentLoaded", function() {
+            const loader = document.getElementById('page-loader');
+            
+            // // Muncul saat form disubmit
+            // document.querySelectorAll('form').forEach(form => {
+            //     form.addEventListener('submit', () => {
+            //         if(!form.classList.contains('no-loader')) loader.classList.add('show');
+            //     });
+            // });
+            
+            // Muncul saat link diklik
+            document.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    let href = this.getAttribute('href');
+                    if (href && href !== '#' && !href.startsWith('javascript') && !this.hasAttribute('data-bs-toggle')) {
+                        loader.classList.add('show');
+                    }
+                });
+            });
+        });
     </script>
 
     @stack('scripts')

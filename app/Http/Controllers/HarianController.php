@@ -9,7 +9,6 @@ use Carbon\Carbon;
 
 class HarianController extends Controller
 {
-
     public function index(Request $request)
     {
         $tanggalTerpilih = $request->input('tanggal', Carbon::today()->toDateString());
@@ -25,7 +24,8 @@ class HarianController extends Controller
             $query->whereDate('created_at', $tanggalTerpilih);
         }
 
-        $daftarHarian = $query->orderBy('created_at', 'desc')->get();
+        // Menggunakan paginate(10) dan withQueryString agar parameter filter tetap terbawa saat pindah halaman
+        $daftarHarian = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
 
         // Kirim $hargaHarian ke view
         return view('harian', compact('daftarHarian', 'tanggalTerpilih', 'hargaHarian'));
@@ -62,7 +62,7 @@ class HarianController extends Controller
         // 🛡️ VALIDASI ANTI-MINUS & ANTI-TEKS KETIKA EDIT/UPDATE DATA
         $request->validate([
             'nama_pelanggan' => 'required|string|max:255',
-            'nominal'        => 'required|integer|min:0', // Mengunci angka bulat positif
+            'nominal'        => 'required|integer|min:0',
         ], [
             'nominal.integer' => 'Gagal! Nominal harus berupa angka bulat murni.',
             'nominal.min'     => 'Gagal! Nominal tidak boleh bernilai minus.',
