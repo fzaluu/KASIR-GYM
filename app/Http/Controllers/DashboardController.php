@@ -23,24 +23,32 @@ class DashboardController extends Controller
                                     ->whereDate('created_at', Carbon::yesterday())
                                     ->count();
 
-        // Ambil ID member yang sudah melakukan check-in hari ini
-        $idSudahCheckin = Transaksi::whereDate('created_at', $hariIni)
-                                     ->where('tipe_transaksi', 'Checkin')
-                                     ->whereNotNull('member_id')
-                                     ->pluck('member_id')
-                                     ->toArray();
+        // [PERBAIKAN] Ambil ID yang sudah check-in dari Transaksi (manual) DAN AbsensiMember (QR Scanner)
+        $checkinManual = Transaksi::whereDate('created_at', $hariIni)
+                                   ->where('tipe_transaksi', 'Checkin')
+                                   ->whereNotNull('member_id')
+                                   ->pluck('member_id')
+                                   ->toArray();
+
+        $checkinQr = \App\Models\AbsensiMember::whereDate('created_at', Carbon::today())
+                                              ->pluck('member_id')
+                                              ->toArray();
+
+        // Gabungkan kedua sumber data dan hilangkan duplikat ID
+        $idSudahCheckin = array_unique(array_merge($checkinManual, $checkinQr));
 
         $data = [
-            // Diubah dari ->get() menjadi ->paginate(10) agar dibatasi 10 data per halaman + ada fitur navigasi
             'logaktivitas'      => Transaksi::whereDate('created_at', $hariIni)->orderBy('created_at', 'desc')->paginate(10),
             'totalpemasukan'    => Transaksi::whereDate('created_at', $hariIni)->sum('nominal'),
             'totalmemberaktif'  => Member::whereDate('tanggal_kadaluarsa', '>=', $hariIni)->count(),
             'totalpelatih'      => Pelatih::count(),
-            // Daftar member aktif yang belum check-in hari ini
+            
+            // Daftar member aktif yang belum check-in hari ini (aman dari data manual maupun QR)
             'daftarMember'      => Member::whereDate('tanggal_kadaluarsa', '>=', $hariIni)
                                          ->whereNotIn('id', $idSudahCheckin)
                                          ->orderBy('nama_member', 'asc')
                                          ->get(),
+                                         
             'daftarMemberSemua' => Member::orderBy('nama_member', 'asc')->get(),
             'daftarPelangganPT' => PenggunaPelatih::orderBy('nama_pengguna', 'asc')->get(),
             'daftarPelatih'     => Pelatih::orderBy('nama_pelatih', 'asc')->get(),

@@ -410,7 +410,7 @@
             // });
             
             // Muncul saat link diklik
-            document.querySelectorAll('a').forEach(link => {
+            document.querySelectorAll('.sidebar-kiri a').forEach(link => {
                 link.addEventListener('click', function(e) {
                     let href = this.getAttribute('href');
                     if (href && href !== '#' && !href.startsWith('javascript') && !this.hasAttribute('data-bs-toggle')) {

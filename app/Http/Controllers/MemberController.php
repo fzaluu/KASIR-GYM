@@ -23,14 +23,31 @@ class MemberController extends Controller
                   ->orWhere('nomor_telepon', 'LIKE', '%' . $request->cari . '%');
         }
 
-        $daftarMember = $query->orderBy('nama_member', 'asc')->get();
-
         $hargaBulanan = HargaPaket::where('nama_paket', 'member')->first()->harga ?? 10000;
 
-        // [DIUBAH DI SINI] Gunakan model AbsensiMember agar sinkron dengan proses check-in QR & manual
-        $memberSudahCheckinHariIni = AbsensiMember::whereDate('created_at', Carbon::today())
-                                                  ->pluck('member_id')
-                                                  ->toArray();
+        // Ambil data check-in hari ini dari Transaksi & AbsensiMember
+        $checkinManual = Transaksi::where('tipe_transaksi', 'Checkin')
+                                  ->whereDate('created_at', Carbon::today())
+                                  ->pluck('member_id')
+                                  ->toArray();
+
+        $checkinQr = AbsensiMember::whereDate('created_at', Carbon::today())
+                                  ->pluck('member_id')
+                                  ->toArray();
+
+        $memberSudahCheckinHariIni = array_unique(array_merge($checkinManual, $checkinQr));
+
+        // [EKSEKUSI PENGURUTAN] 
+        // 1. Member yang sudah check-in didorong ke bawah (menggunakan FIELD MySQL)
+        if (!empty($memberSudahCheckinHariIni)) {
+            $ids = implode(',', $memberSudahCheckinHariIni);
+            $query->orderByRaw("FIELD(id, $ids) ASC");
+        }
+        
+        // 2. Urutkan berdasarkan masa aktif paling sedikit (tanggal kadaluarsa paling dekat)
+        $query->orderBy('tanggal_kadaluarsa', 'asc');
+
+        $daftarMember = $query->paginate(10)->appends($request->all());
 
         return view('member', compact('daftarMember', 'memberSudahCheckinHariIni', 'hargaBulanan'));
     }
@@ -98,7 +115,7 @@ class MemberController extends Controller
         return redirect()->route('member.index')->with('sukses', 'Member baru bernama "' . $request->nama_member . '" berhasil didaftarkan!');
     }
 
-  
+ 
     public function update(Request $request, string $id)
     {
         $request->validate([
@@ -130,7 +147,7 @@ class MemberController extends Controller
         return redirect()->route('member.index')->with('sukses', 'Data keanggotaan member berhasil dihapus!');
     }
 
-  
+ 
     public function checkin($id)
     {
         $member = Member::find($id);
@@ -143,12 +160,17 @@ class MemberController extends Controller
             return redirect()->back()->with('gagal', 'Gagal! Masa aktif member sudah habis.');
         }
 
-        // Validasi duplikasi check-in hari ini
-        $sudahCheckin = Transaksi::where('member_id', $member->id)
-                                ->where('tipe_transaksi', 'Checkin')
-                                ->whereDate('created_at', Carbon::today())
-                                ->exists();
-        if ($sudahCheckin) {
+        // Validasi duplikasi check-in hari ini dari Transaksi ATAU AbsensiMember
+        $sudahCheckinTransaksi = Transaksi::where('member_id', $member->id)
+                                          ->where('tipe_transaksi', 'Checkin')
+                                          ->whereDate('created_at', Carbon::today())
+                                          ->exists();
+
+        $sudahCheckinAbsensi = AbsensiMember::where('member_id', $member->id)
+                                            ->whereDate('created_at', Carbon::today())
+                                            ->exists();
+
+        if ($sudahCheckinTransaksi || $sudahCheckinAbsensi) {
             return redirect()->back()->with('gagal', 'Gagal! Member ' . $member->nama_member . ' sudah check-in hari ini!');
         }
 
@@ -164,7 +186,12 @@ class MemberController extends Controller
             'nominal'        => $nominalOtomatis,
         ]);
 
-        // 3. Increment total checkin member
+        // [TAMBAHAN UTAMA] 3. CATAT KE TABEL ABSENSI MEMBER AGAR SINKRON DENGAN QR SCANNER
+        AbsensiMember::create([
+            'member_id' => $member->id,
+        ]);
+
+        // 4. Increment total checkin member
         $member->increment('total_checkin');
 
         return redirect()->back()->with('sukses', 'Check-in berhasil!');
@@ -205,66 +232,66 @@ class MemberController extends Controller
     
 
     public function prosesCheckinQr(Request $request)
-{
-    $tokenQr = $request->member_id;
+    {
+        $tokenQr = $request->member_id;
 
-    try {
-        // [TAMBAHAN] Dekripsi token aman dari QR code menjadi ID asli member
-        $memberId = Crypt::decryptString($tokenQr);
-    } catch (DecryptException $e) {
-        // [TAMBAHAN] Jika QR code palsu atau rusak
+        try {
+            $memberId = Crypt::decryptString($tokenQr);
+        } catch (DecryptException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'QR Code tidak dikenali atau tidak valid!'
+            ]);
+        }
+
+        $member = Member::find($memberId);
+
+        if (!$member) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ID member tidak terdaftar di database!'
+            ]);
+        }
+
+        $tanggalSekarang = Carbon::today();
+        $tanggalExpired = Carbon::parse($member->tanggal_kadaluarsa);
+
+        if ($tanggalSekarang->greaterThan($tanggalExpired)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Masa aktif member atas nama {$member->nama_member} sudah habis pada " . date('d M Y', strtotime($member->tanggal_kadaluarsa))
+            ]);
+        }
+
+        // Cek duplikasi check-in dari AbsensiMember ATAU Transaksi manual
+        $sudahCheckinAbsensi = AbsensiMember::where('member_id', $member->id)
+            ->whereDate('created_at', Carbon::today())
+            ->exists();
+
+        $sudahCheckinTransaksi = Transaksi::where('member_id', $member->id)
+            ->where('tipe_transaksi', 'Checkin')
+            ->whereDate('created_at', Carbon::today())
+            ->exists();
+
+        if ($sudahCheckinAbsensi || $sudahCheckinTransaksi) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "{$member->nama_member} sudah melakukan check-in hari ini!"
+            ]);
+        }
+
+        // Simpan ke AbsensiMember
+        AbsensiMember::create([
+            'member_id' => $member->id,
+        ]);
+
+        // Tambah total checkin member
+        $member->increment('total_checkin');
+
         return response()->json([
-            'status' => 'error',
-            'message' => 'QR Code tidak dikenali atau tidak valid!'
+            'status' => 'success',
+            'nama' => $member->nama_member,
+            'message' => 'Silakan masuk, selamat berlatih!'
         ]);
     }
-
-    $member = Member::find($memberId);
-
-    // 1. Cek apakah member terdaftar
-    if (!$member) {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'ID member tidak terdaftar di database!'
-        ]);
-    }
-
-    // --- (SISA KODE DI BAWAHNYA TETAP SAMA SEPERTI PUNYAMU) ---
-    // 2. Cek masa aktif membership
-    $tanggalSekarang = Carbon::today();
-    $tanggalExpired = Carbon::parse($member->tanggal_kadaluarsa);
-
-    if ($tanggalSekarang->greaterThan($tanggalExpired)) {
-        return response()->json([
-            'status' => 'error',
-            'message' => "Masa aktif member atas nama {$member->nama_member} sudah habis pada " . date('d M Y', strtotime($member->tanggal_kadaluarsa))
-        ]);
-    }
-
-    // 3. Cek apakah sudah check-in hari ini menggunakan model AbsensiMember
-    $sudahCheckin = AbsensiMember::where('member_id', $member->id)
-        ->whereDate('created_at', Carbon::today())
-        ->exists();
-
-    if ($sudahCheckin) {
-        return response()->json([
-            'status' => 'error',
-            'message' => "{$member->nama_member} sudah melakukan check-in hari ini!"
-        ]);
-    }
-
-    // 4. Simpan riwayat absensi via QR Scanner
-    AbsensiMember::create([
-        'member_id' => $member->id,
-    ]);
-
-    // Tambah total checkin member
-    $member->increment('total_checkin');
-
-    return response()->json([
-        'status' => 'success',
-        'nama' => $member->nama_member,
-        'message' => 'Silakan masuk, selamat berlatih!'
-    ]);
-}
 }
