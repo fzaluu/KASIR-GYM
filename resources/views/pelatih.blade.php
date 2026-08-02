@@ -246,6 +246,7 @@
 
 @endsection
 
+
 @push('scripts')
 <script>
     function bukaModalPelatih() {
@@ -261,24 +262,23 @@
     }
 
     function bukaModalEditPelatih(data) {
-    @if(Auth::check() && Auth::user()->role == 'kasir')
-    document.getElementById('titlePelatih').innerText = "Edit & Absen Pelatih";
-    document.getElementById('formPelatih').action = "/pelatih/" + data.id;
-    document.getElementById('methodFieldPelatih').innerHTML = `@method('PUT')`;
-    document.getElementById('nama_pelatih').value = data.nama_pelatih;
-    document.getElementById('nomor_telepon').value = data.nomor_telepon;
-    document.getElementById('tarif_bulanan').value = 0;
-    
-    // 🛡️ ANTI-MINUS FRONTEND SINKRONISASI: Menjamin data edit lama tidak membawa minus ke form browser
-    if (data.tarif_harian < 0) {
-        document.getElementById('tarif_harian').value = 20000;
-    } else {
-        document.getElementById('tarif_harian').value = data.tarif_harian;
-    }
-    @endif
-    document.getElementById('status_hadir').value = data.status_hadir;
-    document.getElementById('btnSubmitPelatih').innerText = "PERBARUI DATA";
-    document.getElementById('modalPelatih').classList.add('show');
+        @if(Auth::check() && Auth::user()->role == 'kasir')
+        document.getElementById('titlePelatih').innerText = "Edit & Absen Pelatih";
+        document.getElementById('formPelatih').action = "/pelatih/" + data.id;
+        document.getElementById('methodFieldPelatih').innerHTML = `@method('PUT')`;
+        document.getElementById('nama_pelatih').value = data.nama_pelatih;
+        document.getElementById('nomor_telepon').value = data.nomor_telepon;
+        document.getElementById('tarif_bulanan').value = 0;
+        
+        if (data.tarif_harian < 0) {
+            document.getElementById('tarif_harian').value = 20000;
+        } else {
+            document.getElementById('tarif_harian').value = data.tarif_harian;
+        }
+        @endif
+        document.getElementById('status_hadir').value = data.status_hadir;
+        document.getElementById('btnSubmitPelatih').innerText = "PERBARUI DATA";
+        document.getElementById('modalPelatih').classList.add('show');
     }
 
     function bukaModalPengguna() { document.getElementById('modalPengguna').classList.add('show'); }
@@ -294,5 +294,24 @@
         const hargaHarian = pilihanTerpilih.getAttribute('data-harian');
         inputTarif.value = hargaHarian;
     }
+
+    // ✨ TAMBAHAN FITUR INTERAKSI MODAL & BACKDROP (Menyamakan Standar Member)
+    window.addEventListener('click', function(event) {
+        const modalPelatih = document.getElementById('modalPelatih');
+        const modalPengguna = document.getElementById('modalPengguna');
+        if (event.target === modalPelatih) {
+            tutupModal('modalPelatih');
+        }
+        if (event.target === modalPengguna) {
+            tutupModal('modalPengguna');
+        }
+    });
+
+    window.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            tutupModal('modalPelatih');
+            tutupModal('modalPengguna');
+        }
+    });
 </script>
 @endpush
