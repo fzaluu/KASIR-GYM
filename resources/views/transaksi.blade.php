@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Transaksi')
+@section('title', 'Catatan Transaksi')
 @section('page_title', 'Catatan Transaksi')
 
 @push('styles')
