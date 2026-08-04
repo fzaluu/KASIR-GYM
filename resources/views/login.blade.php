@@ -1,6 +1,6 @@
 @extends('layouts.auth')
 
-@section('title', 'Login - Virgo Gym')
+@section('title', 'Login')
 @section('page_title', 'Halaman Login')
 
 @section('konten_login')

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Kunjungan Harian - Virgo Gym')
-@section('page_title', 'Data Pengunjung Harian')
+@section('title', 'Pengunjung Harian')
+@section('page_title', 'Pengunjung Harian')
 
 @push('styles')
 <style>

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Manajemen Pelatih & Pengguna - Virgo Gym')
-@section('page_title', 'Manajemen Pelatih & Pengguna Jasa (PT)')
+@section('title', 'Pelatih & Pengguna')
+@section('page_title', 'Pelatih & Pengguna Jasa (PT)')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/choices.min.css') }}">

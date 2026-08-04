@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard Utama - Virgo Gym')
+@section('title', 'Dashboard')
 @section('page_title', 'Dashboard')
 
 @push('styles')

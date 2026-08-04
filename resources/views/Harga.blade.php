@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Pengaturan Harga - Virgo Gym')
+@section('title', 'Pengaturan Harga')
 @section('page_title', 'Pengaturan Harga')
 
 @section('konten')

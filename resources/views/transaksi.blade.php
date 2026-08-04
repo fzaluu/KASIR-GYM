@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
-@section('title', 'Catatan Transaksi - Kasir Gym')
-@section('page_title', 'Catatan Riwayat Transaksi Keuangan')
+@section('title', 'Transaksi')
+@section('page_title', 'Catatan Transaksi')
 
 @push('styles')
 <style>
