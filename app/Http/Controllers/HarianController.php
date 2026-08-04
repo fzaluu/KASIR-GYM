@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreHarianRequest;
+use App\Http\Requests\UpdateHarianRequest;
 use Illuminate\Http\Request;
 use App\Models\Transaksi;
 use App\Models\HargaPaket;
@@ -31,13 +33,8 @@ class HarianController extends Controller
         return view('harian', compact('daftarHarian', 'tanggalTerpilih', 'hargaHarian'));
     }
 
-    public function store(Request $request)
+    public function store(StoreHarianRequest $request)
     {
-        $request->validate([
-            'nama_pelanggan' => 'required|string|max:255',
-            'nominal'        => 'required|integer|min:0',
-        ]);
-
         // 🛡️ VALIDASI ANTI DUPLIKAT (2x Input)
         $sudahAda = Transaksi::where('nama_pelanggan', $request->nama_pelanggan)
             ->where('tipe_transaksi', 'Harian')
@@ -52,22 +49,17 @@ class HarianController extends Controller
             'nama_pelanggan' => $request->nama_pelanggan,
             'tipe_transaksi' => 'Harian',
             'nominal'        => $request->nominal,
+            'user_id' => auth()->id(),
+            'nama_paket_snapshot' => 'harian',
+            'harga_snapshot' => $request->nominal,
+            'status' => 'paid',
         ]);
 
         return redirect()->route('harian.index')->with('sukses', 'Data pengunjung harian berhasil dicatat.');
     }
 
-    public function update(Request $request, string $id)
+    public function update(UpdateHarianRequest $request, string $id)
     {
-        // 🛡️ VALIDASI ANTI-MINUS & ANTI-TEKS KETIKA EDIT/UPDATE DATA
-        $request->validate([
-            'nama_pelanggan' => 'required|string|max:255',
-            'nominal'        => 'required|integer|min:0',
-        ], [
-            'nominal.integer' => 'Gagal! Nominal harus berupa angka bulat murni.',
-            'nominal.min'     => 'Gagal! Nominal tidak boleh bernilai minus.',
-        ]);
-
         $transaksi = Transaksi::findOrFail($id);
         $transaksi->update([
             'nama_pelanggan' => $request->nama_pelanggan,

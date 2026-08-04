@@ -6,8 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class HargaPaket extends Model
 {
-    // Ini memberi tahu Laravel bahwa model ini menggunakan tabel harga_pakets
     protected $table = 'harga_pakets';
-    
-    protected $fillable = ['nama_paket', 'harga'];
+
+    protected $fillable = ['nama_paket', 'harga', 'updated_by'];
+
+    public function updatedBy()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
 }

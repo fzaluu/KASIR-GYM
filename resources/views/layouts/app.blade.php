@@ -32,7 +32,7 @@
             padding: 24px 16px;
             display: flex;
             flex-direction: column;
-            height: 100vh; /* Menggunakan 100vh presisi */
+            height: 100vh;
             position: fixed;
             left: 0;
             top: 0;
@@ -44,19 +44,18 @@
             flex-direction: column;
         }
 
-        /* BRAND LOGO - DIPERBESAR & JARAK DIPERJATUH KE DASHBOARD DIPERKETAT */
         .sidebar-brand-container {
             display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
-            padding: 5px 0 12px 0; /* Jarak padding dikurangi */
-            margin-bottom: 12px; /* Jarak ke menu Dashboard diperdekat */
+            padding: 5px 0 12px 0;
+            margin-bottom: 12px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .sidebar-logo {
-            width: 100px;  /* Logo makin besar & jelas */
+            width: 100px;
             height: 100px;
             object-fit: contain;
             margin-bottom: 4px;
@@ -64,7 +63,7 @@
         }
 
         .sidebar-brand-text h2 {
-            font-size: 19px; /* Ukuran teks diperbesar sedikit */
+            font-size: 19px;
             color: #fff;
             letter-spacing: 1px;
             font-weight: 800;
@@ -109,7 +108,6 @@
             font-weight: 600;
         }
 
-        /* CARD USER PROFIL DIPINDAHKAN AGAR MEMBERIKAN SPACE DI ATASNYA */
         .sidebar-user-card {
             background: rgba(30, 41, 59, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -118,7 +116,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            margin-top: 30px; /* Memberikan space kosong antara Catatan Transaksi & Card Logout */
+            margin-top: 30px;
         }
 
         .user-profile-info {
@@ -180,7 +178,6 @@
             border-color: rgba(220, 38, 38, 0.4);
         }
 
-
         /* MOBILE NAV */
         .mobile-nav {
             display: none;
@@ -240,7 +237,8 @@
             .header { flex-direction: column; align-items: flex-start; gap: 5px; }
             .header h1 { font-size: 20px; }
         }
-        /* Page Loader & Toast */
+
+        /* Page Loader */
         #page-loader {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -260,6 +258,118 @@
         }
 
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* === MODAL LOGOUT CONFIRMATION === */
+        .logout-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.25s ease-in-out;
+        }
+
+        .logout-modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .logout-modal-box {
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.25s ease-in-out;
+            color: #f8fafc;
+        }
+
+        .logout-modal-overlay.show .logout-modal-box {
+            transform: scale(1);
+        }
+
+        .logout-modal-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+
+        .logout-modal-box h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .logout-modal-box p {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .logout-modal-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .logout-btn-batal, .logout-btn-ya {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .logout-btn-batal {
+            background: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+        }
+
+        .logout-btn-batal:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+
+        .logout-btn-ya {
+            background: #ef4444;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .logout-btn-ya:hover {
+            background: #dc2626;
+        }
+
+        .logout-btn-ya.loading {
+            pointer-events: none;
+            opacity: 0.85;
+        }
     </style>
 
     @stack('styles')
@@ -282,7 +392,7 @@
                     Dashboard
                 </a>
                 
-                @if(Auth::check() && Auth::user()->role == 'kasir')
+                @if(Auth::check() && Auth::user()->isKasir())
                     <div class="menu-kategori">Manajemen Transaksi</div>
                     <a href="{{ route('harian.index') }}" class="{{ Request::is('harian*') ? 'active' : '' }}">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
@@ -298,7 +408,7 @@
                     </a>
                 @endif
 
-                @if(Auth::check() && Auth::user()->role == 'admin')
+                @if(Auth::check() && Auth::user()->isAdmin())
                     <div class="menu-kategori">Keuangan & Admin</div>
                     <a href="{{ route('harga.index') }}" class="{{ Request::is('harga*') ? 'active' : '' }}">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
@@ -325,13 +435,13 @@
                 </div>
                 <div class="user-detail-text">
                     <h4>{{ Auth::user()->name }}</h4>
-                    <span>{{ ucfirst(Auth::user()->role) }}</span>
+                    <span>{{ ucfirst(Auth::user()->role?->slug ?? 'guest') }}</span>
                 </div>
             </div>
 
-            <form action="{{ route('logout') }}" method="POST">
+            <form action="{{ route('logout') }}" method="POST" id="logoutForm">
                 @csrf
-                <button type="submit" class="sidebar-logout-btn">
+                <button type="button" class="sidebar-logout-btn" onclick="bukaModalLogout()">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                     Logout
                 </button>
@@ -344,6 +454,21 @@
     <div id="page-loader">
         <div class="spinner-ring mb-3"></div>
         <div class="fw-medium text-light small tracking-wide">Yeah buddy! Lightweight, baby!</div>
+    </div>
+
+    <!-- MODAL KONFIRMASI LOGOUT -->
+    <div class="logout-modal-overlay" id="logoutModal">
+        <div class="logout-modal-box">
+            <div class="logout-modal-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            </div>
+            <h3>Konfirmasi Logout</h3>
+            <p>Apakah kamu yakin ingin keluar dari sistem Virgo Gym?</p>
+            <div class="logout-modal-actions">
+                <button type="button" class="logout-btn-batal" onclick="tutupModalLogout()">Batal</button>
+                <button type="button" class="logout-btn-ya" id="btnKonfirmasiLogout" onclick="eksekusiLogout()">Ya, Keluar</button>
+            </div>
+        </div>
     </div>
 
     <!-- NAVBAR MOBILE -->
@@ -398,18 +523,46 @@
                 }
             }
         }
+
+        // Fungsi Modal Logout
+        function bukaModalLogout() {
+            document.getElementById('logoutModal').classList.add('show');
+        }
+
+        function tutupModalLogout() {
+            document.getElementById('logoutModal').classList.remove('show');
+        }
+
+        function eksekusiLogout() {
+            const btnYa = document.getElementById('btnKonfirmasiLogout');
+            btnYa.classList.add('loading');
+            btnYa.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 50 50" style="vertical-align: middle; margin-right: 6px;">
+                    <circle cx="25" cy="25" r="20" fill="none" stroke="white" stroke-width="5" stroke-linecap="round" stroke-dasharray="31.4 31.4">
+                        <animateTransform attributeName="transform" type="rotate" repeatCount="indefinite" dur="0.8s" values="0 25 25;360 25 25"/>
+                    </circle>
+                </svg>
+                Keluar...
+            `;
+
+            const loader = document.getElementById('page-loader');
+            if(loader) loader.classList.add('show');
+            
+            document.getElementById('logoutForm').submit();
+        }
+
+        // Tutup modal jika user klik di luar kotak modal
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('logoutModal');
+            if (event.target === modal) {
+                tutupModalLogout();
+            }
+        });
+
         // Page Loader on Link & Form Submit
         document.addEventListener("DOMContentLoaded", function() {
             const loader = document.getElementById('page-loader');
             
-            // // Muncul saat form disubmit
-            // document.querySelectorAll('form').forEach(form => {
-            //     form.addEventListener('submit', () => {
-            //         if(!form.classList.contains('no-loader')) loader.classList.add('show');
-            //     });
-            // });
-            
-            // Muncul saat link diklik
             document.querySelectorAll('.sidebar-kiri a').forEach(link => {
                 link.addEventListener('click', function(e) {
                     let href = this.getAttribute('href');

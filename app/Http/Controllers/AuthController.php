@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -21,25 +22,19 @@ class AuthController extends Controller
      * Proses autentikasi login.
      */
     public function login(Request $request)
-    {
-        // 1. Validasi input
-        $credentials = $request->validate([
-            'username' => ['required', 'string'],
-            'password' => ['required', 'string'],
-        ]);
+{
+    $credentials = $request->validate([
+        'username' => ['required', 'string'],
+        'password' => ['required', 'string'],
+    ]);
 
-        // 2. Coba proses login
-        // Kita gunakan 'username' sesuai dengan kolom di database kita tadi
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
-
-            // Arahkan ke halaman utama/dashboard setelah berhasil login
-            return redirect()->intended('/');
-        }
-
-        // 3. Jika gagal, kirim balik dengan pesan error
-        return back()->with('error', 'Username atau Password salah!');
+    if (Auth::attempt($credentials)) {
+        $request->session()->regenerate();
+        return redirect()->intended('/');
     }
+
+    return back()->with('error', 'Username atau Password salah!');
+}
 
     /**
      * Proses logout.

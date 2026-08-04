@@ -204,6 +204,27 @@
         color: #2563eb !important;
         background-color: #f8fafc !important;
     }
+
+    /* Styling Kotak QR Code Mini Client-Side */
+    .qr-box-mini {
+        width: 50px;
+        height: 50px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        padding: 2px;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .qr-box-mini:hover { transform: scale(1.08); }
+    .qr-box-mini canvas, .qr-box-mini img {
+        width: 44px !important;
+        height: 44px !important;
+    }
 </style>
 @endpush
 
@@ -274,7 +295,10 @@
                     $tanggalSekarang = \Carbon\Carbon::today();
                     $tanggalExpired = \Carbon\Carbon::parse($row->tanggal_kadaluarsa);
                     $sisaHari = $tanggalSekarang->diffInDays($tanggalExpired, false);
-                    $tokenQrAman = Crypt::encryptString($row->id);
+                    $tokenQrAman = Crypt::encryptString(json_encode([
+                        'member_id' => $row->id,
+                        'expires_at' => now()->addHours(24)->toIso8601String(),
+                    ]));
                 @endphp
                 <tr class="baris-member">
                     <td>{{ ($daftarMember->currentPage() - 1) * $daftarMember->perPage() + $index + 1 }}</td>
@@ -290,14 +314,9 @@
                     </td>
                     <td style="text-align: center;"><span style="font-weight: 700; color: #475569;">🔑 {{ $row->total_checkin ?? 0 }} x</span></td>
                     
+                    <!-- Container QR Code Client-Side -->
                     <td style="text-align: center;">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ urlencode($tokenQrAman) }}" 
-                            alt="QR Code Member" 
-                            style="width: 50px; height: 50px; margin: 0 auto; border-radius: 4px; background: white; padding: 2px; border: 1px solid #cbd5e1; cursor: pointer; transition: transform 0.2s;" 
-                            title="Klik untuk memperbesar QR Code"
-                            onmouseover="this.style.transform='scale(1.08)'" 
-                            onmouseout="this.style.transform='scale(1)'"
-                            onclick="bukaModalQr('{{ $tokenQrAman }}', '{{ $row->nama_member }}', '{{ $row->id }}')">
+                        <div id="qr-mini-{{ $row->id }}" class="qr-box-mini" title="Klik untuk memperbesar QR Code" onclick="bukaModalQr('{{ $tokenQrAman }}', '{{ $row->nama_member }}', '{{ $row->id }}')"></div>
                         <div style="font-size: 10px; color: #64748b; margin-top: 2px; font-weight: 600;">ID: {{ $row->id }}</div>
                     </td>
 
@@ -375,7 +394,7 @@
         @endif
     </div>
 
-    <!-- MODAL POPUP LIHAT & DOWNLOAD QR CODE -->
+    <!-- MODAL POPUP LIHAT & DOWNLOAD QR CODE (CLIENT-SIDE) -->
     <div class="modal-overlay" id="modalQrCode">
         <div class="modal-box" style="text-align: center; width: 380px;">
             <div class="modal-header">
@@ -383,8 +402,8 @@
                 <button class="btn-close" onclick="tutupModalQr()">&times;</button>
             </div>
             
-            <div style="margin: 20px 0;">
-                <img id="qrImagePreview" src="" alt="QR Code Besar" style="width: 200px; height: 200px; margin: 0 auto; border-radius: 8px; border: 1px solid #cbd5e1; padding: 8px; background: white;">
+            <div style="margin: 20px 0; display: flex; flex-direction: column; align-items: center;">
+                <div id="qrContainerLarge" style="padding: 10px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; display: inline-block;"></div>
                 <p id="qrModalSubtitle" style="font-size: 13px; color: #64748b; margin-top: 10px; font-weight: 600;"></p>
             </div>
 
@@ -440,7 +459,28 @@
 @endsection
 
 @push('scripts')
+<!-- Load Library Lokal qrcode.min.js -->
+<script src="{{ asset('js/qrcode.min.js') }}"></script>
 <script>
+    // Render otomatis QR Code kecil di setiap baris tabel secara client-side
+    document.addEventListener("DOMContentLoaded", function() {
+        @foreach($daftarMember as $row)
+            @php
+                $tokenAmanRow = Crypt::encryptString(json_encode([
+                    'member_id' => $row->id,
+                    'expires_at' => now()->addHours(24)->toIso8601String(),
+                ]));
+            @endphp
+            if(document.getElementById("qr-mini-{{ $row->id }}")) {
+                new QRCode(document.getElementById("qr-mini-{{ $row->id }}"), {
+                    text: "{{ $tokenAmanRow }}",
+                    width: 44,
+                    height: 44
+                });
+            }
+        @endforeach
+    });
+
     const modal = document.getElementById('modalMember');
     const form = document.getElementById('formMember');
     const modalTitle = document.getElementById('modalTitle');
@@ -465,36 +505,43 @@
 
     const inputCari = document.getElementById('inputCariMember');
     const modalQrCode = document.getElementById('modalQrCode');
-    const qrImagePreview = document.getElementById('qrImagePreview');
+    const qrContainerLarge = document.getElementById('qrContainerLarge');
     const qrModalTitle = document.getElementById('qrModalTitle');
     const qrModalSubtitle = document.getElementById('qrModalSubtitle');
     
     let currentNamaFileQr = "QRCode.png";
 
     function bukaModalQr(tokenEnc, namaMember, idMember) {
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(tokenEnc)}`;
         qrModalTitle.innerText = "QR Code: " + namaMember;
         qrModalSubtitle.innerText = "ID Member: " + idMember;
-        qrImagePreview.src = qrUrl;
         currentNamaFileQr = `QRCode-${namaMember.replace(/\s+/g, '_')}.png`;
+        
+        // Bersihkan kontainer modal besar sebelumnya
+        qrContainerLarge.innerHTML = "";
+        
+        // Render QR code besar secara dinamis di sisi client via qrcode.min.js
+        new QRCode(qrContainerLarge, {
+            text: tokenEnc,
+            width: 200,
+            height: 200
+        });
+
         modalQrCode.classList.add('show');
     }
 
     function downloadQrCode() {
-        const imageUrl = qrImagePreview.src;
-        fetch(imageUrl)
-            .then(response => response.blob())
-            .then(blob => {
-                const blobUrl = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = blobUrl;
-                a.download = currentNamaFileQr;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(blobUrl);
-            })
-            .catch(err => { window.open(imageUrl, '_blank'); });
+        const canvas = qrContainerLarge.querySelector('canvas');
+        if (canvas) {
+            const imageURL = canvas.toDataURL("image/png");
+            const a = document.createElement('a');
+            a.href = imageURL;
+            a.download = currentNamaFileQr;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } else {
+            alert("Gagal mengunduh QR Code.");
+        }
     }
 
     function tutupModalQr() { modalQrCode.classList.remove('show'); }

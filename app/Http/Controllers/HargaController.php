@@ -13,13 +13,22 @@ class HargaController extends Controller
     }
 
     public function updateAll(Request $request) {
-    
-        if (!$request->has('harga')) {
-            return back()->with('gagal', 'Data tidak ditemukan');
-        }
+        $request->validate([
+            'harga' => ['required', 'array'],
+            'harga.*' => ['required', 'integer', 'min:0'],
+        ], [
+            'harga.required' => 'Data harga wajib dikirim.',
+            'harga.array' => 'Format data harga tidak valid.',
+            'harga.*.required' => 'Setiap harga wajib diisi.',
+            'harga.*.integer' => 'Setiap harga harus berupa angka bulat.',
+            'harga.*.min' => 'Harga tidak boleh bernilai negatif.',
+        ]);
 
         foreach ($request->harga as $id => $nilai) {
-            HargaPaket::where('id', $id)->update(['harga' => $nilai]);
+            HargaPaket::where('id', $id)->update([
+                'harga' => $nilai,
+                'updated_by' => auth()->id(),
+            ]);
         }
         return back()->with('sukses', 'Harga berhasil diupdate!');
     }

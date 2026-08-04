@@ -3,33 +3,48 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Transaksi extends Model
 {
-    // Mengunci nama tabel yang ada di database MySQL kamu
+    use SoftDeletes;
+
     protected $table = "transaksi";
 
-    // Mendaftarkan kolom yang boleh diisi secara massal (Mass Assignment)
-    // Di sini kita tambahkan member_id dan pelatih_id sebagai kolom relasi baru
     protected $fillable = [
         'tipe_transaksi',
         'member_id',
         'pelatih_id',
+        'user_id',
+        'nomor_invoice',
         'nama_pelanggan',
         'nominal',
+        'nama_paket_snapshot',
+        'harga_snapshot',
+        'status',
     ];
 
-    // Hubungan Relasi: Setiap transaksi ini dimiliki oleh satu Member (jika ada)
+    protected static function booted(): void
+    {
+        static::creating(function (self $transaksi) {
+            if (empty($transaksi->nomor_invoice)) {
+                $transaksi->nomor_invoice = 'INV-' . now()->format('Ymd') . '-' . str_pad((string) self::whereDate('created_at', now()->toDateString())->count() + 1, 5, '0', STR_PAD_LEFT);
+            }
+        });
+    }
+
     public function member()
     {
-        // belongsTo artinya tabel transaksi bertindak sebagai tabel anak yang menyimpan member_id
         return $this->belongsTo(Member::class, 'member_id');
     }
 
-    // Hubungan Relasi: Setiap transaksi ini juga bisa terikat ke satu Pelatih (jika ada sewa PT)
     public function pelatih()
     {
-        // belongsTo artinya tabel transaksi terhubung ke master data di tabel pelatih
         return $this->belongsTo(Pelatih::class, 'pelatih_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

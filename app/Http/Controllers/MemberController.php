@@ -3,13 +3,18 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Http\Requests\StoreMemberRequest;
+use App\Http\Requests\UpdateMemberRequest;
 use App\Models\Member;
 use App\Models\Transaksi;
 use App\Models\HargaPaket;
 use Carbon\Carbon;
-use App\Models\AbsensiMember; // Menggunakan model AbsensiMember yang sudah kamu buat
+use Endroid\QrCode\QrCode;
+use App\Models\AbsensiMember;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\DB;
+use Endroid\QrCode\Writer\PngWriter;
 
 class MemberController extends Controller
 {
@@ -53,77 +58,72 @@ class MemberController extends Controller
     }
 
 
-    public function store(Request $request)
+    public function store(StoreMemberRequest $request)
     {
-        $request->validate([
-            'nama_member'   => 'required|string|max:255',
-            'nomor_telepon' => 'required|string|max:20',
-            'nominal'       => 'required|integer|min:0',
-        ], [
-            'nominal.integer' => 'Gagal! Nominal pembayaran harus berupa angka bulat murni.',
-            'nominal.min'     => 'Gagal! Nominal pembayaran tidak boleh bernilai minus.',
-        ]);
+        return DB::transaction(function () use ($request) {
+            $cekNomorSama = Member::where('nomor_telepon', $request->nomor_telepon)
+                ->lockForUpdate()
+                ->first();
 
-        $cekNomorSama = Member::where('nomor_telepon', $request->nomor_telepon)->first();
-        if ($cekNomorSama) {
-            if ($cekNomorSama->nama_member !== $request->nama_member) {
+            if ($cekNomorSama && $cekNomorSama->nama_member !== $request->nama_member) {
                 return redirect()->route('member.index')->with('eror', 'Gagal! Nomor HP ' . $request->nomor_telepon . ' sudah terdaftar di sistem atas nama "' . $cekNomorSama->nama_member . '". Gunakan nomor lain!');
             }
-        }
 
-        $memberLama = Member::where('nama_member', $request->nama_member)
-                            ->where('nomor_telepon', $request->nomor_telepon)
-                            ->first();
+            $memberLama = Member::where('nama_member', $request->nama_member)
+                ->where('nomor_telepon', $request->nomor_telepon)
+                ->lockForUpdate()
+                ->first();
 
-        if ($memberLama) {
-            $apakahMasihAktif = Carbon::parse($memberLama->tanggal_kadaluarsa)->isFuture();
+            if ($memberLama) {
+                $apakahMasihAktif = Carbon::parse($memberLama->tanggal_kadaluarsa)->isFuture();
 
-            if ($apakahMasihAktif) {
-                return redirect()->route('member.index')->with('eror', 'Gagal! Member atas nama "' . $memberLama->nama_member . '" statusnya masih AKTIF sampai ' . date('d M Y', strtotime($memberLama->tanggal_kadaluarsa)) . '. Tidak perlu di-input ulang!!');
+                if ($apakahMasihAktif) {
+                    return redirect()->route('member.index')->with('eror', 'Gagal! Member atas nama "' . $memberLama->nama_member . '" statusnya masih AKTIF sampai ' . date('d M Y', strtotime($memberLama->tanggal_kadaluarsa)) . '. Tidak perlu di-input ulang!!');
+                }
+
+                $memberLama->update([
+                    'tanggal_kadaluarsa' => Carbon::today()->addDays(30)
+                ]);
+
+                Transaksi::create([
+                    'member_id' => $memberLama->id,
+                    'nama_pelanggan' => $memberLama->nama_member,
+                    'tipe_transaksi' => 'Perpanjang',
+                    'nominal' => $request->nominal,
+                    'user_id' => auth()->id(),
+                    'nama_paket_snapshot' => 'member',
+                    'harga_snapshot' => $request->nominal,
+                    'status' => 'paid',
+                ]);
+
+                return redirect()->route('member.index')->with('sukses', 'Sistem Mendeteksi Member Lama! Status keanggotaan "' . $memberLama->nama_member . '" otomatis diperpanjang +30 hari ke depan.');
             }
 
-            $memberLama->update([
-                'tanggal_kadaluarsa' => Carbon::today()->addDays(30)
+            $memberBaru = Member::create([
+                'nama_member' => $request->nama_member,
+                'nomor_telepon' => $request->nomor_telepon,
+                'tanggal_kadaluarsa' => Carbon::today()->addDays(30),
+                'total_checkin' => 0,
             ]);
 
             Transaksi::create([
-                'member_id'      => $memberLama->id,
-                'nama_pelanggan' => $memberLama->nama_member,
-                'nomor_telepon'  => $memberLama->nomor_telepon,
-                'tipe_transaksi' => 'Perpanjang',
-                'nominal'        => $request->nominal,
+                'member_id' => $memberBaru->id,
+                'nama_pelanggan' => $memberBaru->nama_member,
+                'tipe_transaksi' => 'Baru',
+                'nominal' => $request->nominal,
+                'user_id' => auth()->id(),
+                'nama_paket_snapshot' => 'member',
+                'harga_snapshot' => $request->nominal,
+                'status' => 'paid',
             ]);
 
-            return redirect()->route('member.index')->with('sukses', 'Sistem Mendeteksi Member Lama! Status keanggotaan "' . $memberLama->nama_member . '" otomatis diperpanjang +30 hari ke depan.');
-        }
-
-        $memberBaru = Member::create([
-            'nama_member'        => $request->nama_member,
-            'nomor_telepon'      => $request->nomor_telepon,
-            'tanggal_kadaluarsa' => Carbon::today()->addDays(30),
-            'total_checkin'      => 0,
-        ]);
-
-        Transaksi::create([
-            'member_id'      => $memberBaru->id,
-            'nama_pelanggan' => $memberBaru->nama_member,
-            'nomor_telepon'  => $memberBaru->nomor_telepon,
-            'tipe_transaksi' => 'Baru',
-            'nominal'        => $request->nominal,
-        ]);
-
-        return redirect()->route('member.index')->with('sukses', 'Member baru bernama "' . $request->nama_member . '" berhasil didaftarkan!');
+            return redirect()->route('member.index')->with('sukses', 'Member baru bernama "' . $request->nama_member . '" berhasil didaftarkan!');
+        });
     }
 
  
-    public function update(Request $request, string $id)
+    public function update(UpdateMemberRequest $request, string $id)
     {
-        $request->validate([
-            'nama_member'        => 'required|string|max:255',
-            'nomor_telepon'      => 'required|string|max:20',
-            'tanggal_kadaluarsa' => 'required|date',
-        ]);
-
         $member = Member::findOrFail($id);
         $member->update([
             'nama_member'        => $request->nama_member,
@@ -150,51 +150,42 @@ class MemberController extends Controller
  
     public function checkin($id)
     {
-        $member = Member::find($id);
-        if (!$member) {
-            return redirect()->back()->with('gagal', 'Member tidak ditemukan!');
-        }
+        return DB::transaction(function () use ($id) {
+            $member = Member::whereKey($id)->lockForUpdate()->first();
+            if (!$member) {
+                return redirect()->back()->with('gagal', 'Member tidak ditemukan!');
+            }
 
-        // Validasi masa aktif
-        if (Carbon::parse($member->tanggal_kadaluarsa)->isPast()) {
-            return redirect()->back()->with('gagal', 'Gagal! Masa aktif member sudah habis.');
-        }
+            if (Carbon::parse($member->tanggal_kadaluarsa)->isPast()) {
+                return redirect()->back()->with('gagal', 'Gagal! Masa aktif member sudah habis.');
+            }
 
-        // Validasi duplikasi check-in hari ini dari Transaksi ATAU AbsensiMember
-        $sudahCheckinTransaksi = Transaksi::where('member_id', $member->id)
-                                          ->where('tipe_transaksi', 'Checkin')
-                                          ->whereDate('created_at', Carbon::today())
-                                          ->exists();
+            if ($member->sudahCheckinHariIni()) {
+                return redirect()->back()->with('gagal', 'Gagal! Member ' . $member->nama_member . ' sudah check-in hari ini!');
+            }
 
-        $sudahCheckinAbsensi = AbsensiMember::where('member_id', $member->id)
-                                            ->whereDate('created_at', Carbon::today())
-                                            ->exists();
+            $paket = HargaPaket::where('nama_paket', 'checkin')->first();
+            $nominalOtomatis = $paket ? $paket->harga : 0;
 
-        if ($sudahCheckinTransaksi || $sudahCheckinAbsensi) {
-            return redirect()->back()->with('gagal', 'Gagal! Member ' . $member->nama_member . ' sudah check-in hari ini!');
-        }
+            Transaksi::create([
+                'member_id' => $member->id,
+                'nama_pelanggan' => $member->nama_member,
+                'tipe_transaksi' => 'Checkin',
+                'nominal' => $nominalOtomatis,
+                'user_id' => auth()->id(),
+                'nama_paket_snapshot' => 'checkin',
+                'harga_snapshot' => $nominalOtomatis,
+                'status' => 'paid',
+            ]);
 
-        // 1. Ambil harga checkin otomatis dari pengaturan harga
-        $paket = HargaPaket::where('nama_paket', 'checkin')->first();
-        $nominalOtomatis = $paket ? $paket->harga : 0;
+            AbsensiMember::create([
+                'member_id' => $member->id,
+            ]);
 
-        // 2. CATAT KE TABEL TRANSAKSI (Agar masuk Log Aktivitas & Hilang dari Modal Dashboard)
-        Transaksi::create([
-            'member_id'      => $member->id,
-            'nama_pelanggan' => $member->nama_member,
-            'tipe_transaksi' => 'Checkin',
-            'nominal'        => $nominalOtomatis,
-        ]);
+            $member->increment('total_checkin');
 
-        // [TAMBAHAN UTAMA] 3. CATAT KE TABEL ABSENSI MEMBER AGAR SINKRON DENGAN QR SCANNER
-        AbsensiMember::create([
-            'member_id' => $member->id,
-        ]);
-
-        // 4. Increment total checkin member
-        $member->increment('total_checkin');
-
-        return redirect()->back()->with('sukses', 'Check-in berhasil!');
+            return redirect()->back()->with('sukses', 'Check-in berhasil!');
+        });
     }
 
     public function perpanjang(Request $request, string $id)
@@ -206,29 +197,31 @@ class MemberController extends Controller
             'nominal.min'     => 'Gagal! Nominal perpanjang tidak boleh bernilai minus.',
         ]);
 
-        $member = Member::findOrFail($id);
-        $expiredLama = Carbon::parse($member->tanggal_kadaluarsa);
+        return DB::transaction(function () use ($request, $id) {
+            $member = Member::whereKey($id)->lockForUpdate()->firstOrFail();
+            $expiredLama = Carbon::parse($member->tanggal_kadaluarsa);
+            $expiredBaru = $expiredLama->isPast() ? Carbon::today()->addDays(30) : $expiredLama->addDays(30);
 
-        if ($expiredLama->isPast()) {
-            $expiredBaru = Carbon::today()->addDays(30);
-        } else {
-            $expiredBaru = $expiredLama->addDays(30);
-        }
+            $member->update([
+                'tanggal_kadaluarsa' => $expiredBaru
+            ]);
 
-        $member->update([
-            'tanggal_kadaluarsa' => $expiredBaru
-        ]);
+            Transaksi::create([
+                'member_id' => $member->id,
+                'nama_pelanggan' => $member->nama_member,
+                'tipe_transaksi' => 'Perpanjang',
+                'nominal' => $request->nominal,
+                'user_id' => auth()->id(),
+                'nama_paket_snapshot' => 'member',
+                'harga_snapshot' => $request->nominal,
+                'status' => 'paid',
+            ]);
 
-        Transaksi::create([
-            'member_id'      => $member->id,
-            'nama_pelanggan' => $member->nama_member,
-            'nomor_telepon'  => $member->nomor_telepon,
-            'tipe_transaksi' => 'Perpanjang',
-            'nominal'        => $request->nominal,
-        ]);
-
-        return redirect()->route('member.index')->with('sukses', 'Masa aktif member ' . $member->nama_member . ' berhasil diperpanjang +30 hari!');
+            return redirect()->route('member.index')->with('sukses', 'Masa aktif member ' . $member->nama_member . ' berhasil diperpanjang +30 hari!');
+        });
     }
+    
+
     
 
     public function prosesCheckinQr(Request $request)
@@ -236,7 +229,8 @@ class MemberController extends Controller
         $tokenQr = $request->member_id;
 
         try {
-            $memberId = Crypt::decryptString($tokenQr);
+            $decodedToken = Crypt::decryptString($tokenQr);
+            $payload = json_decode($decodedToken, true);
         } catch (DecryptException $e) {
             return response()->json([
                 'status' => 'error',
@@ -244,54 +238,74 @@ class MemberController extends Controller
             ]);
         }
 
-        $member = Member::find($memberId);
-
-        if (!$member) {
+        if (!is_array($payload) || empty($payload['member_id'])) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'ID member tidak terdaftar di database!'
+                'message' => 'Format QR Code tidak valid!'
             ]);
         }
 
-        $tanggalSekarang = Carbon::today();
-        $tanggalExpired = Carbon::parse($member->tanggal_kadaluarsa);
-
-        if ($tanggalSekarang->greaterThan($tanggalExpired)) {
+        if (!empty($payload['expires_at']) && Carbon::parse($payload['expires_at'])->isPast()) {
             return response()->json([
                 'status' => 'error',
-                'message' => "Masa aktif member atas nama {$member->nama_member} sudah habis pada " . date('d M Y', strtotime($member->tanggal_kadaluarsa))
+                'message' => 'QR Code sudah expired. Silakan generate ulang dari data member.'
             ]);
         }
 
-        // Cek duplikasi check-in dari AbsensiMember ATAU Transaksi manual
-        $sudahCheckinAbsensi = AbsensiMember::where('member_id', $member->id)
-            ->whereDate('created_at', Carbon::today())
-            ->exists();
+        $memberId = (int) $payload['member_id'];
 
-        $sudahCheckinTransaksi = Transaksi::where('member_id', $member->id)
-            ->where('tipe_transaksi', 'Checkin')
-            ->whereDate('created_at', Carbon::today())
-            ->exists();
+        return DB::transaction(function () use ($memberId) {
+            $member = Member::whereKey($memberId)->lockForUpdate()->first();
 
-        if ($sudahCheckinAbsensi || $sudahCheckinTransaksi) {
-            return response()->json([
-                'status' => 'error',
-                'message' => "{$member->nama_member} sudah melakukan check-in hari ini!"
+            if (!$member) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'ID member tidak terdaftar di database!'
+                ]);
+            }
+
+            $tanggalSekarang = Carbon::today();
+            $tanggalExpired = Carbon::parse($member->tanggal_kadaluarsa);
+
+            if ($tanggalSekarang->greaterThan($tanggalExpired)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Masa aktif member atas nama {$member->nama_member} sudah habis pada " . date('d M Y', strtotime($member->tanggal_kadaluarsa))
+                ]);
+            }
+
+            if ($member->sudahCheckinHariIni()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "{$member->nama_member} sudah melakukan check-in hari ini!"
+                ]);
+            }
+
+            $paket = HargaPaket::where('nama_paket', 'checkin')->first();
+            $nominalOtomatis = $paket ? $paket->harga : 0;
+
+            Transaksi::create([
+                'member_id' => $member->id,
+                'nama_pelanggan' => $member->nama_member,
+                'tipe_transaksi' => 'Checkin',
+                'nominal' => $nominalOtomatis,
+                'user_id' => auth()->id(),
+                'nama_paket_snapshot' => 'checkin',
+                'harga_snapshot' => $nominalOtomatis,
+                'status' => 'paid',
             ]);
-        }
 
-        // Simpan ke AbsensiMember
-        AbsensiMember::create([
-            'member_id' => $member->id,
-        ]);
+            AbsensiMember::create([
+                'member_id' => $member->id,
+            ]);
 
-        // Tambah total checkin member
-        $member->increment('total_checkin');
+            $member->increment('total_checkin');
 
-        return response()->json([
-            'status' => 'success',
-            'nama' => $member->nama_member,
-            'message' => 'Silakan masuk, selamat berlatih!'
-        ]);
+            return response()->json([
+                'status' => 'success',
+                'nama' => $member->nama_member,
+                'message' => 'Silakan masuk, selamat berlatih!'
+            ]);
+        });
     }
 }

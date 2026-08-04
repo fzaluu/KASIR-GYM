@@ -434,7 +434,7 @@
     @endif
 
     <!-- Bagian Atas: Statistik & Tombol Aksi (Tetap Stabil) -->
-    @if(Auth::user()->role == 'admin')
+    @if(Auth::user()->isAdmin())
     <div class="rekap-container">
         <div class="kartu-rekap">
             <h3>Pengunjung Hari Ini</h3>
@@ -469,7 +469,7 @@
     </div>
     @endif
 
-    @if(Auth::user()->role == 'kasir')
+    @if(Auth::user()->isKasir())
     <div class="action-area">
         <button class="btn-aksi" id="btnBukaModal">[+] TRANSAKSI BARU / CHECK-IN</button>
     </div>

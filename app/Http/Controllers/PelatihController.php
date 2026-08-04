@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StorePelatihRequest;
+use App\Http\Requests\UpdatePelatihRequest;
 use Illuminate\Http\Request;
 use App\Models\Pelatih;
 use App\Models\Transaksi;
@@ -11,59 +13,44 @@ class PelatihController extends Controller
 {
     public function index(Request $request)
     {
-        $cari = $request->input('cari');
+        $cariPelatih = $request->input('cari_pelatih');
+        $cariSewa = $request->input('cari_sewa');
 
-        $daftarPelatih = Pelatih::when($cari, function($query) use ($cari) {
-            return $query->where('nama_pelatih', 'like', '%'.$cari.'%');
-        })->get();
+        // Ubah DESC menjadi ASC agar 'hadir' ada di urutan teratas
+        $daftarPelatih = Pelatih::when($cariPelatih, function($query) use ($cariPelatih) {
+            return $query->where('nama_pelatih', 'like', '%'.$cariPelatih.'%');
+        })->orderByRaw("FIELD(status_hadir, 'hadir', 'tidak_hadir') ASC")
+          ->orderBy('nama_pelatih', 'asc')
+          ->paginate(5, ['*'], 'page_pelatih')
+          ->appends($request->query());
 
         $daftarPengguna = PenggunaPelatih::with('pelatih')
-            ->when($cari, function($query) use ($cari) {
-                return $query->where('nama_pengguna', 'like', '%'.$cari.'%');
-            })->get();
+            ->when($cariSewa, function($query) use ($cariSewa) {
+                return $query->where('nama_pengguna', 'like', '%'.$cariSewa.'%');
+            })->paginate(5, ['*'], 'page_sewa')
+            ->appends($request->query());
 
         return view('pelatih', [
             'daftarPelatih' => $daftarPelatih,
             'daftarPengguna' => $daftarPengguna
         ]);
-    }
+    }    
 
-    public function store(Request $request)
+    public function store(StorePelatihRequest $request)
     {
-        // 🛡️ VALIDASI ANTI-MINUS TAMBAH PELATIH
-        $request->validate([
-            'nama_pelatih'  => 'required|unique:pelatih,nama_pelatih',
-            'nomor_telepon' => 'required|string|max:20',
-            'tarif_bulanan' => 'required|integer|min:0',
-            'tarif_harian'  => 'required|integer|min:0', // Wajib angka bulat positif
-            'status_hadir'  => 'required|in:hadir,tidak_hadir',
-        ], [
-            'nama_pelatih.unique' => 'Nama pelatih sudah terdaftar. Gunakan nama lain.',
-            'tarif_harian.integer'=> 'Gagal! Tarif harian harus berupa angka bulat.',
-            'tarif_harian.min'    => 'Gagal! Tarif harian tidak boleh bernilai minus.',
-        ]);
+        $data = $request->validated();
 
-        Pelatih::create($request->all());
+        Pelatih::create($data);
 
         return redirect()->route('pelatih.index')->with('sukses', 'Data pelatih baru berhasil disimpan.');
     }
 
-    public function update(Request $request, string $id)
+    public function update(UpdatePelatihRequest $request, string $id)
     {
-        // 🛡️ VALIDASI ANTI-MINUS UPDATE PELATIH
-        $request->validate([
-            'nama_pelatih'  => 'required|string|max:255',
-            'nomor_telepon' => 'required|string|max:20',
-            'tarif_bulanan' => 'required|integer|min:0',
-            'tarif_harian'  => 'required|integer|min:0', // Wajib angka bulat positif
-            'status_hadir'  => 'required|in:hadir,tidak_hadir',
-        ], [
-            'tarif_harian.integer'=> 'Gagal! Tarif harian harus berupa angka bulat.',
-            'tarif_harian.min'    => 'Gagal! Tarif harian tidak boleh bernilai minus.',
-        ]);
+        $data = $request->validated();
 
         $pelatih = Pelatih::findOrFail($id);
-        $pelatih->update($request->all());
+        $pelatih->update($data);
 
         Transaksi::where('pelatih_id', $pelatih->id)->update([
             'nama_pelanggan' => $request->nama_pelatih
@@ -78,36 +65,41 @@ class PelatihController extends Controller
         return redirect()->route('pelatih.index')->with('sukses', 'Data pelatih berhasil dihapus.');
     }
     
-    public function storePengguna(Request $request)
-    {
-        // 🛡️ VALIDASI ANTI-MINUS TRANSAKSI SEWA PT
-        $request->validate([
-            'nama_pengguna'           => 'required|string|max:255',
-            'nomor_telepon_pengguna'  => 'required|string|max:20',
-            'pelatih_id'              => 'required|exists:pelatih,id',
-            'tipe_jasa'               => 'required|in:perbulan,perhari',
-            'tarif_jasa'              => 'required|integer|min:0', // Mengunci nominal sewa
-        ], [
-            'tarif_jasa.integer'      => 'Gagal! Tarif sewa harus berupa angka bulat murni.',
-            'tarif_jasa.min'          => 'Gagal! Tarif sewa tidak boleh bernilai minus.',
-        ]);
+    public function storePengguna(StorePenggunaPelatihRequest $request)
+{
+    $pengguna = PenggunaPelatih::create($request->validated());
 
-        $pengguna = PenggunaPelatih::create($request->all());
+    Transaksi::create([
+        'pelatih_id' => $request->pelatih_id,
+        'nama_pelanggan' => $request->nama_pengguna,
+        'nomor_telepon' => $request->nomor_telepon_pengguna,
+        'tipe_transaksi' => 'Sewa_pt',
+        'nominal' => $request->tarif_jasa,
+        'user_id' => auth()->id(),
+        'nama_paket_snapshot' => 'pelatih_pt',
+        'harga_snapshot' => $request->tarif_jasa,
+        'status' => 'paid',
+    ]);
 
-        Transaksi::create([
-            'pelatih_id'     => $request->pelatih_id,
-            'nama_pelanggan' => $request->nama_pengguna,
-            'nomor_telepon'  => $request->nomor_telepon_pengguna,
-            'tipe_transaksi' => 'Sewa_pt',
-            'nominal'        => $request->tarif_jasa,
-        ]);
-
-        return redirect()->route('pelatih.index')->with('sukses', 'Penyewaan jasa pelatih baru berhasil dicatat dan masuk laporan keuangan.');
-    }
+    return redirect()->route('pelatih.index')->with('sukses', 'Penyewaan jasa pelatih baru berhasil dicatat dan masuk laporan keuangan.');
+}
 
     public function destroyPengguna(string $id)
     {
         PenggunaPelatih::destroy($id);
         return redirect()->route('pelatih.index')->with('sukses', 'Data sewa pengguna berhasil dihapus.');
+    }
+    public function absen(Request $request, string $id)
+    {
+        $request->validate([
+            'status_hadir' => 'required|in:hadir,tidak_hadir',
+        ]);
+
+        $pelatih = Pelatih::findOrFail($id);
+        $pelatih->update([
+            'status_hadir' => $request->status_hadir,
+        ]);
+
+        return redirect()->route('pelatih.index')->with('sukses', 'Status kehadiran pelatih ' . $pelatih->nama_pelatih . ' berhasil diperbarui.');
     }
 }

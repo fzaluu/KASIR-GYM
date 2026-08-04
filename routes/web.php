@@ -10,10 +10,11 @@ use App\Http\Controllers\PelatihController;
 use App\Http\Controllers\HargaController;
 
 // --- Rute untuk Tamu ---
-Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login'])->name('login.proses');
-});
+Route::middleware('guest')->get('/login', [AuthController::class, 'showLogin'])->name('login');
+
+Route::middleware(['guest', 'throttle:5,1'])
+    ->post('/login', [AuthController::class, 'login'])
+    ->name('login.proses');
 
 // --- Rute Terlindungi ---
 Route::middleware('auth')->group(function () {
@@ -24,25 +25,39 @@ Route::middleware('auth')->group(function () {
 
     // --- Rute Pengaturan Harga ---
     Route::get('/harga', [HargaController::class, 'index'])->name('harga.index');
-    Route::post('/harga/update', [HargaController::class, 'updateAll'])->name('harga.update_all');
 
     // --- Rute Check-in QR Code (Pastikan di atas resource member) ---
     Route::get('/checkin-scanner', function () {
         return view('checkin');
     })->name('checkin.scanner');
-    
+
     Route::post('/proses-checkin-qr', [MemberController::class, 'prosesCheckinQr']);
 
     // --- Modul Member ---
     Route::post('/member/checkin/{id}', [MemberController::class, 'checkin'])->name('member.checkin');
     Route::post('/member/perpanjang/{id}', [MemberController::class, 'perpanjang'])->name('member.perpanjang');
-    Route::resource('member', MemberController::class)->parameters(['member' => 'id']);
+    Route::resource('member', MemberController::class)->except(['destroy'])->parameters(['member' => 'id']);
 
     // --- Modul Lainnya ---
+   // --- Modul Lainnya ---
     Route::resource('harian', HarianController::class)->only(['index', 'store', 'update', 'destroy'])->parameters(['harian' => 'id']);
-    Route::resource('pelatih', PelatihController::class)->only(['index', 'store', 'update', 'destroy'])->parameters(['pelatih' => 'id']);
+    
+    // Perbarui rute pelatih (hapus update dari resource publik)
+    Route::resource('pelatih', PelatihController::class)->only(['index', 'store'])->parameters(['pelatih' => 'id']);
+    Route::patch('/pelatih/{id}/absen', [PelatihController::class, 'absen'])->name('pelatih.absen');
+    
     Route::post('/pelatih/pengguna', [PelatihController::class, 'storePengguna'])->name('pelatih.storePengguna');
-    Route::delete('/pelatih/pengguna/{id}', [PelatihController::class, 'destroyPengguna'])->name('pelatih.destroyPengguna');
-    Route::get('/transaksi/export', [TransaksiController::class, 'export'])->name('transaksi.export');
     Route::resource('transaksi', TransaksiController::class)->only(['index', 'store']);
+
+    Route::middleware('admin')->group(function () {
+        Route::post('/harga/update', [HargaController::class, 'updateAll'])->name('harga.update_all');
+        Route::delete('/member/{id}', [MemberController::class, 'destroy'])->name('member.destroy');
+        
+        // Tambahkan rute update penuh pelatih khusus admin
+        Route::put('/pelatih/{id}', [PelatihController::class, 'update'])->name('pelatih.update');
+        
+        Route::delete('/pelatih/{id}', [PelatihController::class, 'destroy'])->name('pelatih.destroy');
+        Route::delete('/pelatih/pengguna/{id}', [PelatihController::class, 'destroyPengguna'])->name('pelatih.destroyPengguna');
+        Route::get('/transaksi/export', [TransaksiController::class, 'export'])->name('transaksi.export');
+    });
 });
