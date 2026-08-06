@@ -306,4 +306,48 @@ class ExampleTest extends TestCase
             'tarif_harian' => 75000,
         ]);
     }
+    public function test_nonaktif_user_cannot_login()
+{
+    $role = \App\Models\Role::firstOrCreate(['slug' => 'kasir'], ['name' => 'Kasir']); // Sesuaikan kolom name/nama_role
+    $user = \App\Models\User::create([
+        'name' => 'User Nonaktif',
+        'username' => 'nonaktifuser',
+        'password' => bcrypt('password123'),
+        'role_id' => $role->id,
+        'status' => 'nonaktif'
+    ]);
+
+    $response = $this->post('/login', [
+        'username' => 'nonaktifuser',
+        'password' => 'password123'
+    ]);
+
+    $response->assertSessionHas('error', 'Akun Anda tidak aktif. Hubungi admin untuk informasi lebih lanjut.');
+    $this->assertGuest();
+}
+
+public function test_aktif_user_login_updates_last_login_at()
+{
+    $role = \App\Models\Role::firstOrCreate(['slug' => 'kasir'], ['name' => 'Kasir']); // Sesuaikan kolom name/nama_role
+    $user = \App\Models\User::create([
+        'name' => 'User Aktif',
+        'username' => 'aktifuser',
+        'password' => bcrypt('password123'),
+        'role_id' => $role->id,
+        'status' => 'aktif'
+    ]);
+
+    $this->assertNull($user->last_login_at);
+
+    $response = $this->post('/login', [
+        'username' => 'aktifuser',
+        'password' => 'password123'
+    ]);
+
+    $response->assertRedirect('/');
+    $this->assertAuthenticatedAs($user);
+    
+    $user->refresh();
+    $this->assertNotNull($user->last_login_at);
+}
 }

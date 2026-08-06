@@ -42,6 +42,9 @@
         .sidebar-top-section {
             display: flex;
             flex-direction: column;
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         .sidebar-brand-container {
@@ -116,7 +119,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            margin-top: 30px;
+            margin-top: auto;
         }
 
         .user-profile-info {
@@ -386,7 +389,8 @@
                 </div>
             </div>
             
-            <div class="menu-links">
+            <!-- BLOK 1: MENU UTAMA -->
+            <div id="mainMenuBlock" class="menu-links">
                 <a href="{{ url('/') }}" class="{{ Request::is('/') ? 'active' : '' }}">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     Dashboard
@@ -424,19 +428,52 @@
                     </a>
                 @endif
             </div>
+
+            <!-- BLOK 2: MENU PENGATURAN / KELOLA USER (ADMIN ONLY) -->
+            @if(Auth::check() && Auth::user()->isAdmin())
+            <div id="settingsMenuBlock" class="menu-links" style="display: none;">
+                <button type="button" onclick="toggleMenuMode()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; transition: all 0.2s;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                    Kembali ke Menu Utama
+                </button>
+
+                <div class="menu-kategori">Kelola User & Sistem</div>
+                <a href="{{ route('users.index') }}" class="{{ Request::is('users') || (Request::is('users/*') && !Request::is('users/transaksi-riwayat*')) ? 'active' : '' }}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    Manajemen User
+                </a>
+                <a href="{{ route('users.transaksi-riwayat') }}" class="{{ Request::is('users/transaksi-riwayat*') ? 'active' : '' }}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                    Riwayat Transaksi User
+                </a>
+                <a href="{{ route('activity-log.index') }}" class="{{ Request::is('activity-log*') ? 'active' : '' }}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                    Activity Log
+                </a>
+            </div>
+            @endif
         </div>
 
         <!-- USER CARD & LOGOUT DI BAGIAN PALING BAWAH -->
         @auth
         <div class="sidebar-user-card">
-            <div class="user-profile-info">
-                <div class="user-avatar-badge">
-                    {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div class="user-profile-info" style="flex: 1; overflow: hidden;">
+                    <div class="user-avatar-badge">
+                        {{ strtoupper(substr(Auth::user()->name, 0, 2)) }}
+                    </div>
+                    <div class="user-detail-text">
+                        <h4>{{ Auth::user()->name }}</h4>
+                        <span>{{ ucfirst(Auth::user()->role?->slug ?? 'guest') }}</span>
+                    </div>
                 </div>
-                <div class="user-detail-text">
-                    <h4>{{ Auth::user()->name }}</h4>
-                    <span>{{ ucfirst(Auth::user()->role?->slug ?? 'guest') }}</span>
-                </div>
+
+                <!-- Tombol Ikon Settings (Hanya Admin) -->
+                @if(Auth::user()->isAdmin())
+                <button type="button" id="toggleSettingsBtn" onclick="toggleMenuMode()" title="Menu Pengaturan" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #38bdf8; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .69.21 1.35.57 1.91z"></path></svg>
+                </button>
+                @endif
             </div>
 
             <form action="{{ route('logout') }}" method="POST" id="logoutForm">
@@ -524,6 +561,22 @@
             }
         }
 
+        // Fungsi Toggle Menu Mode Sidebar (Utama <-> Pengaturan)
+        function toggleMenuMode() {
+            const mainBlock = document.getElementById('mainMenuBlock');
+            const settingsBlock = document.getElementById('settingsMenuBlock');
+            
+            if (mainBlock && settingsBlock) {
+                if (mainBlock.style.display === 'none') {
+                    mainBlock.style.display = 'flex';
+                    settingsBlock.style.display = 'none';
+                } else {
+                    mainBlock.style.display = 'none';
+                    settingsBlock.style.display = 'flex';
+                }
+            }
+        }
+
         // Fungsi Modal Logout
         function bukaModalLogout() {
             document.getElementById('logoutModal').classList.add('show');
@@ -561,6 +614,16 @@
 
         // Page Loader on Link & Form Submit
         document.addEventListener("DOMContentLoaded", function() {
+            // Jika halaman saat ini berada di rute users atau activity-log, otomatis tampilkan blok pengaturan
+            @if(request()->is('users*') || request()->is('activity-log*'))
+                const mainBlock = document.getElementById('mainMenuBlock');
+                const settingsBlock = document.getElementById('settingsMenuBlock');
+                if (mainBlock && settingsBlock) {
+                    mainBlock.style.display = 'none';
+                    settingsBlock.style.display = 'flex';
+                }
+            @endif
+
             const loader = document.getElementById('page-loader');
             
             document.querySelectorAll('.sidebar-kiri a').forEach(link => {

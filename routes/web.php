@@ -8,6 +8,8 @@ use App\Http\Controllers\MemberController;
 use App\Http\Controllers\HarianController;
 use App\Http\Controllers\PelatihController;
 use App\Http\Controllers\HargaController;
+use App\Http\Controllers\UserController; 
+use App\Http\Controllers\ActivityLogController;  // <-- TAMBAHKAN INI DI ATAS
 
 // --- Rute untuk Tamu ---
 Route::middleware('guest')->get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -39,7 +41,6 @@ Route::middleware('auth')->group(function () {
     Route::resource('member', MemberController::class)->except(['destroy'])->parameters(['member' => 'id']);
 
     // --- Modul Lainnya ---
-   // --- Modul Lainnya ---
     Route::resource('harian', HarianController::class)->only(['index', 'store', 'update', 'destroy'])->parameters(['harian' => 'id']);
     
     // Perbarui rute pelatih (hapus update dari resource publik)
@@ -59,5 +60,13 @@ Route::middleware('auth')->group(function () {
         Route::delete('/pelatih/{id}', [PelatihController::class, 'destroy'])->name('pelatih.destroy');
         Route::delete('/pelatih/pengguna/{id}', [PelatihController::class, 'destroyPengguna'])->name('pelatih.destroyPengguna');
         Route::get('/transaksi/export', [TransaksiController::class, 'export'])->name('transaksi.export');
-    });
+
+       
+        //  RUTE KELOLA USER (TAHAP 3)
+
+        Route::resource('users', UserController::class)->except(['show']);
+        Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
+        Route::get('/users/transaksi-riwayat', [UserController::class, 'transaksiRiwayat'])->name('users.transaksi-riwayat');
+        Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
+        });
 });
