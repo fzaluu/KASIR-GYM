@@ -9,7 +9,7 @@ use App\Http\Controllers\HarianController;
 use App\Http\Controllers\PelatihController;
 use App\Http\Controllers\HargaController;
 use App\Http\Controllers\UserController; 
-use App\Http\Controllers\ActivityLogController;  // <-- TAMBAHKAN INI DI ATAS
+use App\Http\Controllers\ActivityLogController;
 
 // --- Rute untuk Tamu ---
 Route::middleware('guest')->get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -25,10 +25,7 @@ Route::middleware('auth')->group(function () {
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-    // --- Rute Pengaturan Harga ---
-    Route::get('/harga', [HargaController::class, 'index'])->name('harga.index');
-
-    // --- Rute Check-in QR Code (Pastikan di atas resource member) ---
+    // --- Rute Check-in QR Code ---
     Route::get('/checkin-scanner', function () {
         return view('checkin');
     })->name('checkin.scanner');
@@ -43,30 +40,36 @@ Route::middleware('auth')->group(function () {
     // --- Modul Lainnya ---
     Route::resource('harian', HarianController::class)->only(['index', 'store', 'update', 'destroy'])->parameters(['harian' => 'id']);
     
-    // Perbarui rute pelatih (hapus update dari resource publik)
+    // Pelatih
     Route::resource('pelatih', PelatihController::class)->only(['index', 'store'])->parameters(['pelatih' => 'id']);
     Route::patch('/pelatih/{id}/absen', [PelatihController::class, 'absen'])->name('pelatih.absen');
-    
     Route::post('/pelatih/pengguna', [PelatihController::class, 'storePengguna'])->name('pelatih.storePengguna');
-    Route::resource('transaksi', TransaksiController::class)->only(['index', 'store']);
+    
+    // TRANSAKSI: Hanya method store() di luar agar kasir bisa tetap input transaksi
+    Route::post('/transaksi', [TransaksiController::class, 'store'])->name('transaksi.store');
 
+    // --- RUTE KHUSUS ADMIN ---
     Route::middleware('admin')->group(function () {
+        // Halaman Harga (Index & Update) khusus Admin
+        Route::get('/harga', [HargaController::class, 'index'])->name('harga.index');
         Route::post('/harga/update', [HargaController::class, 'updateAll'])->name('harga.update_all');
+        
+        // Riwayat Transaksi (Index) khusus Admin
+        Route::get('/transaksi', [TransaksiController::class, 'index'])->name('transaksi.index');
+        
         Route::delete('/member/{id}', [MemberController::class, 'destroy'])->name('member.destroy');
         
-        // Tambahkan rute update penuh pelatih khusus admin
+        // Pelatih Admin
         Route::put('/pelatih/{id}', [PelatihController::class, 'update'])->name('pelatih.update');
-        
         Route::delete('/pelatih/{id}', [PelatihController::class, 'destroy'])->name('pelatih.destroy');
         Route::delete('/pelatih/pengguna/{id}', [PelatihController::class, 'destroyPengguna'])->name('pelatih.destroyPengguna');
+        
         Route::get('/transaksi/export', [TransaksiController::class, 'export'])->name('transaksi.export');
 
-       
-        //  RUTE KELOLA USER (TAHAP 3)
-
+        // Kelola User & Activity Log
         Route::resource('users', UserController::class)->except(['show']);
         Route::post('/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
         Route::get('/users/transaksi-riwayat', [UserController::class, 'transaksiRiwayat'])->name('users.transaksi-riwayat');
         Route::get('/activity-log', [ActivityLogController::class, 'index'])->name('activity-log.index');
-        });
+    });
 });

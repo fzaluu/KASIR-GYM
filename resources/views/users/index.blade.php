@@ -14,7 +14,7 @@
         background: #e2e8f0;
         border-radius: 6px;
         animation: skeleton-pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
+    
 
     /* === NOTIFIKASI MENGAMBANG (SAMA SEPERTI DASHBOARD) === */
     .notif-popup {
@@ -33,7 +33,7 @@
         justify-content: space-between;
         animation: slideInRight 0.3s ease-out forwards;
     }
-
+    
     .notif-sukses { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
     .notif-gagal { background-color: #fee2e2; color: #7f1d1d; border: 1px solid #fecaca; }
     .notif-close { background: none; border: none; font-size: 18px; cursor: pointer; color: inherit; opacity: 0.7; margin-left: 15px; }
@@ -65,9 +65,9 @@
 
     <!-- Bar Aksi -->
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-        <button type="button" onclick="bukaModalTambah()" style="padding: 10px 18px; background: #16a34a; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-            + Tambah User Baru
-        </button>
+        <button class="btn-tambah" type="button" onclick="bukaModalTambah()" onmouseover="this.style.backgroundColor='#0ea5e9'" onmouseout="this.style.backgroundColor='#38bdf8'" style="padding: 12px 20px; background: #38bdf8; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background-color 0.2s ease;">
+        [+] Tambah User Baru
+    </button>
 
         <div style="display: flex; gap: 8px;">
             <input type="text" id="liveSearchInput" value="{{ $search ?? '' }}" placeholder="Live search nama atau username..." style="padding: 10px 14px; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; width: 280px; color: #0f172a;">

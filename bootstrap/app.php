@@ -19,7 +19,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (HttpException $e, $request) {
             if ($e->getStatusCode() === 429) {
-                return response()->view('error.429', ['exception' => $e], 429);
+                return response()->view('errors.429', ['exception' => $e], 429);
             }
         });
     })->create();

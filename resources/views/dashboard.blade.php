@@ -251,6 +251,7 @@
         width: 100%;
         height: 100%;
         background-color: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
         display: flex;
         justify-content: center;
         align-items: flex-start;
@@ -277,7 +278,7 @@
         margin: 0 auto;
         overflow-y: visible;
         box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-        transform: scale(0.9);
+        transform: scale(0.95);
         transition: all 0.25s ease;
         padding-bottom: 40px;
     }
@@ -333,6 +334,11 @@
         background-color: #fff;
         box-sizing: border-box;
         color: #0f172a;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .form-control:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
     }
 
     .radio-grid {
@@ -349,6 +355,13 @@
         align-items: center;
         gap: 8px;
         color: #475569;
+        padding: 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        background: #f8fafc;
+    }
+    .radio-grid input:checked + span, .radio-grid label:has(input:checked) {
+        border-color: #3b82f6; color: #3b82f6; font-weight: 600; background: rgba(59,130,246,0.04);
     }
 
     .btn-simpan {
@@ -562,7 +575,7 @@
                                 <label>
                                     <input type="radio" name="tipe_kunjungan" value="{{ strtolower($hp->nama_paket) }}" data-harga="{{ $hp->harga }}"
                                     {{ $loop->first ? 'checked' : '' }}>
-                                    {{ ucfirst($hp->nama_paket) }}
+                                    <span>{{ ucfirst($hp->nama_paket) }}</span>
                                 </label>
                             @endif
                         @endforeach
@@ -600,7 +613,7 @@
                 </div>
 
                 <button type="submit" class="btn-simpan" id="btnSimpan">
-                    <span>SIMPAN TRANSAKSI KASIR</span>
+                    <span>Simpan Transaksi Kasir</span>
                 </button>
             </form>
         </div>
@@ -740,4 +753,4 @@
         }
     });
 </script>
-@endpush
+@endpush    
